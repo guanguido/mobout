@@ -1,0 +1,22 @@
+name: Deploy to Strato
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Strato
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STRATO_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.STRATO_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            index.html \
+            ${{ secrets.STRATO_USER }}@${{ secrets.STRATO_HOST }}:/mnt/web410/c1/52/59703252/htdocs/mobout.de/production/
