@@ -2,7 +2,7 @@ name: Deploy to Strato
 
 on:
   push:
-    branches: [master]
+    branches: [master, develop]
 
 jobs:
   deploy:
@@ -10,6 +10,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set deploy target
+        id: target
+        run: |
+          if [ "${{ github.ref_name }}" = "master" ]; then
+            echo "path=/mnt/web410/c1/52/59703252/htdocs/mobout.de/production/" >> $GITHUB_OUTPUT
+          else
+            echo "path=/mnt/web410/c1/52/59703252/htdocs/mobout.de/staging/" >> $GITHUB_OUTPUT
+          fi
 
       - name: Deploy to Strato
         run: |
@@ -19,4 +28,4 @@ jobs:
           ssh-keyscan -H ${{ secrets.STRATO_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
           rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
             index.html \
-            ${{ secrets.STRATO_USER }}@${{ secrets.STRATO_HOST }}:/mnt/web410/c1/52/59703252/htdocs/mobout.de/production/
+            ${{ secrets.STRATO_USER }}@${{ secrets.STRATO_HOST }}:${{ steps.target.outputs.path }}
