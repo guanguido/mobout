@@ -81,6 +81,12 @@ Single-Page). Verlinkt aus der Hauptnavigation in `index.html` (Link `.nav-membe
 - **Seite:** `mitglieder/index.html` ist eigenständig (eigenes CSS, Logo als Base64), da `assets/`
   nicht auf den Server deployt wird.
 - **Grenzen:** nativer Browser-Login (nicht gestaltbar), Logout browserabhängig; nur über HTTPS sicher.
+- **Inhalt:** `mitglieder/index.html` zeigt Info-Karten für die Crew. Neben Platzhalter-Karten
+  (interne Infos, Bilder posten, Downloads) gibt es die Karte "Navionics Account" mit den
+  Zugangsdaten für den gemeinsamen Navionics-Account (Boating HD App, Tiefenkarten). Die Karte
+  selbst in `mitglieder/index.html` ist die Quelle der Wahrheit für diese Zugangsdaten (nicht
+  hier duplizieren). Abo läuft aktuell bis 14.05.2027 – bei Verlängerung/Änderung die Karte
+  entsprechend aktualisieren.
 
 ---
 
