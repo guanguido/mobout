@@ -12,6 +12,7 @@ Statische Website für die Angelgruppe MobOut (www.mobout.de). Die Gruppe fährt
 mobout/
 ├── index.html          # Haupt-HTML (Single-Page, enthält CSS + JS, Bilder als Base64 eingebettet)
 ├── motd.php            # Öffentlicher Lese-Endpunkt für die "Nachricht des Tages" (kein Basic Auth)
+├── contact.php          # Öffentlicher Endpunkt für das Kontaktformular (kein Basic Auth), versendet per mail()
 ├── mitglieder/         # Passwortgeschützter Mitgliederbereich (Basic Auth)
 │   ├── index.php       # Eigenständige Seite (eigenes CSS, Logo als Base64); rendert MOTD-Formular serverseitig
 │   ├── motd-save.php   # Schreib-Endpunkt für die MOTD, geschützt durch .htaccess der Umgebung
@@ -30,8 +31,9 @@ mobout/
 - Reines HTML/CSS/JavaScript (kein Framework, kein Build-System)
 - Single-Page mit Smooth-Scroll-Navigation
 - Responsive Design mit Hamburger-Menü für Mobile (≤768px)
-- Punktuell PHP (Strato-Hosting, PHP 8.3) für die "Nachricht des Tages" – beschränkt auf
-  `mitglieder/index.php`, `mitglieder/motd-save.php` und `motd.php`, siehe eigener Abschnitt unten
+- Punktuell PHP (Strato-Hosting, PHP 8.3) für die "Nachricht des Tages" und das Kontaktformular –
+  beschränkt auf `mitglieder/index.php`, `mitglieder/motd-save.php`, `motd.php` und `contact.php`,
+  siehe eigene Abschnitte unten
 
 ## Sprache
 
@@ -112,6 +114,23 @@ erscheint automatisch auf der öffentlichen Website" zu validieren:
 - `index.html` lädt `motd.php` per `fetch()` und blendet die Nachricht als Banner im Hero-Bereich
   (unter dem "Kontaktiere uns"-Button) ein – nur wenn ein Text gesetzt ist, sonst nichts. Einfügung
   ausschließlich über `textContent` (nie `innerHTML`), um XSS auszuschließen.
+
+## Kontaktformular
+
+Das Formular im Abschnitt "Kontakt & Informationen" sendet per `fetch()` an `contact.php`
+(Repo-Root, **nicht** durch Basic Auth geschützt, wie `motd.php`):
+
+- `contact.php` validiert die Pflichtfelder (Name, E-Mail, Betreff, Nachricht), prüft die
+  E-Mail-Adresse mit `filter_var(..., FILTER_VALIDATE_EMAIL)`, entfernt Zeilenumbrüche aus den
+  einzeiligen Feldern (Header-Injection-Schutz) und verschickt die Nachricht per PHP `mail()`
+  an `info@mobout.de` mit `Reply-To` auf die Absenderadresse. Antwort ist JSON (`{ok: true}` /
+  `{ok: false, error: "..."}`).
+- Voraussetzung: Der Strato-Webspace muss `mail()` unterstützen (Standard bei Strato-Hosting).
+  Es gibt kein SMTP-Fallback und keine Logdatei für gescheiterte Zustellungen.
+- `index.html` deaktiviert den Submit-Button während des Requests und zeigt je nach Ergebnis
+  eine Erfolgs- oder Fehlermeldung per `alert()` (Fehlermeldung verweist auf `info@mobout.de`
+  als Ausweichkontakt).
+- Der Deploy-Workflow überträgt `contact.php` zusätzlich zu `index.html` und `motd.php`.
 
 ---
 

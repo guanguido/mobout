@@ -42,5 +42,6 @@ jobs:
           rsync -avz --delete --exclude=data/ -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
             index.html \
             motd.php \
+            contact.php \
             mitglieder \
             ${{ secrets.STRATO_USER }}@${{ secrets.STRATO_HOST }}:${{ steps.target.outputs.path }}

@@ -1061,8 +1061,28 @@
         // Form submission
         document.getElementById('contactForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            alert('Vielen Dank für deine Nachricht! Wir werden uns bald bei dir melden.');
-            this.reset();
+            const form = this;
+            const submitBtn = form.querySelector('.submit-btn');
+            submitBtn.disabled = true;
+            fetch('/contact.php', {
+                method: 'POST',
+                body: new FormData(form)
+            })
+                .then(r => r.json().catch(() => ({ ok: false })))
+                .then(data => {
+                    if (data.ok) {
+                        alert('Vielen Dank für deine Nachricht! Wir werden uns bald bei dir melden.');
+                        form.reset();
+                    } else {
+                        alert('Deine Nachricht konnte nicht gesendet werden. Bitte versuche es später erneut oder schreib uns direkt an info@mobout.de.');
+                    }
+                })
+                .catch(() => {
+                    alert('Deine Nachricht konnte nicht gesendet werden. Bitte versuche es später erneut oder schreib uns direkt an info@mobout.de.');
+                })
+                .finally(() => {
+                    submitBtn.disabled = false;
+                });
         });
 
         // Nachricht des Tages (falls vorhanden)
