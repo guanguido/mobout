@@ -1076,16 +1076,6 @@
 
         // Hamburger menu toggle
         const hamburger = document.getElementById('hamburger');
-        const nav = document.querySelector('nav');
-        hamburger.addEventListener('click', () => {
-            nav.classList.toggle('open');
-        });
-        nav.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => nav.classList.remove('open'));
-        });
-
-        // Hamburger menu toggle
-        const hamburger = document.getElementById('hamburger');
         const navMenu = document.querySelector('nav');
         hamburger.addEventListener('click', () => {
             navMenu.classList.toggle('open');
