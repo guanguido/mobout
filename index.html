@@ -143,6 +143,17 @@
             opacity: 0.95;
         }
 
+        .motd-banner {
+            margin: 1.5rem auto 0;
+            padding: 0.8rem 1.5rem;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            display: block;
+            width: fit-content;
+            max-width: 100%;
+            font-size: 1rem;
+        }
+
         .cta-button {
             display: inline-block;
             background-color: var(--accent-color);
@@ -1054,15 +1065,18 @@
             this.reset();
         });
 
-        // Hamburger menu toggle
-        const hamburger = document.getElementById('hamburger');
-        const nav = document.querySelector('nav');
-        hamburger.addEventListener('click', () => {
-            nav.classList.toggle('open');
-        });
-        nav.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => nav.classList.remove('open'));
-        });
+        // Nachricht des Tages (falls vorhanden)
+        fetch('/motd.php')
+            .then(r => r.ok ? r.text() : '')
+            .then(text => {
+                const msg = text.trim();
+                if (!msg) return;
+                const banner = document.createElement('p');
+                banner.className = 'motd-banner';
+                banner.textContent = '📢 ' + msg;
+                document.querySelector('.hero-content').appendChild(banner);
+            })
+            .catch(() => {});
 
         // Hamburger menu toggle
         const hamburger = document.getElementById('hamburger');

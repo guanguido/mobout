@@ -8,3 +8,6 @@ Thumbs.db
 
 # Temp
 *.tmp
+
+# MOTD-Daten (nur serverseitig, muss Deploys überstehen)
+/mitglieder/data/

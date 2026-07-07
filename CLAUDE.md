@@ -11,8 +11,11 @@ Statische Website für die Angelgruppe MobOut (www.mobout.de). Die Gruppe fährt
 ```
 mobout/
 ├── index.html          # Haupt-HTML (Single-Page, enthält CSS + JS, Bilder als Base64 eingebettet)
+├── motd.php            # Öffentlicher Lese-Endpunkt für die "Nachricht des Tages" (kein Basic Auth)
 ├── mitglieder/         # Passwortgeschützter Mitgliederbereich (Basic Auth)
-│   ├── index.html      # Eigenständige Seite (eigenes CSS, Logo als Base64)
+│   ├── index.php       # Eigenständige Seite (eigenes CSS, Logo als Base64); rendert MOTD-Formular serverseitig
+│   ├── motd-save.php   # Schreib-Endpunkt für die MOTD, geschützt durch .htaccess der Umgebung
+│   ├── data/            # Nur serverseitig, git-ignoriert (motd.txt) – überlebt Deploys
 │   ├── .htaccess       # Basic-Auth-Konfiguration (Auth-Pfad wird beim Deploy injiziert)
 │   └── .htpasswd       # Ein Nutzer, bcrypt-Hash des gemeinsamen Passworts
 ├── assets/
@@ -27,6 +30,8 @@ mobout/
 - Reines HTML/CSS/JavaScript (kein Framework, kein Build-System)
 - Single-Page mit Smooth-Scroll-Navigation
 - Responsive Design mit Hamburger-Menü für Mobile (≤768px)
+- Punktuell PHP (Strato-Hosting, PHP 8.3) für die "Nachricht des Tages" – beschränkt auf
+  `mitglieder/index.php`, `mitglieder/motd-save.php` und `motd.php`, siehe eigener Abschnitt unten
 
 ## Sprache
 
@@ -88,6 +93,24 @@ Single-Page). Verlinkt aus der Hauptnavigation in `index.html` (Link `.nav-membe
   hier duplizieren). Abo läuft aktuell bis 14.05.2027 – bei Verlängerung/Änderung die Karte
   entsprechend aktualisieren.
 
+## Nachricht des Tages (MOTD)
+
+Kleines PHP-Testfeature, um den Mechanismus "Mitglied editiert im geschützten Bereich → Inhalt
+erscheint automatisch auf der öffentlichen Website" zu validieren:
+
+- Mitglied trägt im Mitgliederbereich (Karte "Nachricht des Tages") einen Text ein und speichert
+  über `mitglieder/motd-save.php` (liegt im geschützten Verzeichnis, erbt den Basic-Auth-Schutz
+  automatisch). Der Text landet in `mitglieder/data/motd.txt` auf dem Server.
+- `mitglieder/data/` ist **git-ignoriert** (server-only). Der Deploy-Workflow nutzt `rsync --delete`
+  (damit umbenannte/gelöschte Dateien wie alte `.html`-Versionen wirklich vom Server verschwinden),
+  schließt `mitglieder/data/` aber explizit per `--exclude=data/` von der Löschung aus, damit
+  `motd.txt` Deploys übersteht.
+- `motd.php` (Repo-Root, **nicht** durch Basic Auth geschützt) liest die Datei serverseitig vom
+  Dateisystem aus und liefert sie escaped als Klartext aus – funktioniert trotz Apache-Auth auf
+  `mitglieder/`, weil diese nur HTTP-Requests durch Apache betrifft, nicht lokale Dateisystemzugriffe.
+- `index.html` lädt `motd.php` per `fetch()` und blendet die Nachricht als Banner im Hero-Bereich
+  (unter dem "Kontaktiere uns"-Button) ein – nur wenn ein Text gesetzt ist, sonst nichts.
+
 ---
 
 # Deployment-Kontext
@@ -103,7 +126,7 @@ Single-Page). Verlinkt aus der Hauptnavigation in `index.html` (Link `.nav-membe
 - Secrets vorhanden: `STRATO_SSH_KEY`, `STRATO_HOST`, `STRATO_USER`
 - Zwei-Ziel-Push: `git push origin <branch>` geht an NAS (Master-Backup) + GitHub
 - Pull nur vom NAS (`origin` fetch = NAS, push = NAS + GitHub)
-- Übertragen werden `index.html` + `mitglieder/` (wenn `assets/` deployrelevant wird: Workflow anpassen)
+- Übertragen werden `index.html` + `motd.php` + `mitglieder/` (wenn `assets/` deployrelevant wird: Workflow anpassen)
 
 ## Arbeitsweise
 
