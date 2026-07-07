@@ -83,6 +83,17 @@
             padding: 0.15rem 0.6rem; border-radius: 999px; margin-left: 0.5rem;
             vertical-align: middle;
         }
+        .expedition-entry { border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-top: 1rem; background: white; }
+        .expedition-entry summary { cursor: pointer; font-weight: 600; color: var(--primary-color); }
+        .expedition-entry label { display: block; margin: 0.6rem 0 0.2rem; font-size: 0.9rem; }
+        .expedition-entry input[type="text"], .expedition-entry input[type="number"], .expedition-entry input[type="url"], .expedition-entry textarea {
+            padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 5px; font-family: inherit;
+        }
+        .expedition-thumbs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+        .expedition-thumb { position: relative; }
+        .expedition-thumb img { width: 70px; height: 70px; object-fit: cover; border-radius: 6px; display: block; }
+        .expedition-thumb form { position: absolute; top: -6px; right: -6px; margin: 0; }
+        .expedition-thumb button { border: none; background: var(--accent-color); color: white; border-radius: 50%; width: 20px; height: 20px; line-height: 1; cursor: pointer; font-size: 0.8rem; }
         .back-link { display: inline-block; margin-top: 2.5rem; color: var(--secondary-color); text-decoration: none; font-weight: 500; }
         .back-link:hover { text-decoration: underline; }
         footer {
@@ -123,8 +134,9 @@
                 <p>Termine, Absprachen und alles rund um die nächste Expedition &ndash; hier an einem Ort. Inhalte folgen in Kürze.</p>
             </div>
             <div class="card">
-                <h2>Bilder posten <span class="badge">folgt</span></h2>
-                <p>Bald könnt ihr hier eure Fotos von den Touren hochladen und teilen. Die Anleitung dazu kommt demnächst.</p>
+                <h2>Expeditionen</h2>
+                <p>Neue Ausflüge anlegen, bestehende bearbeiten oder Fotos aus Instagram hochladen &ndash; erscheint automatisch auf der öffentlichen Website.</p>
+                <p><a href="#expeditionen-bereich">Expeditionen verwalten &rarr;</a></p>
             </div>
             <div class="card">
                 <h2>Downloads</h2>
@@ -164,6 +176,75 @@
                 <textarea name="motd" maxlength="500" rows="4" style="width:100%;"><?= htmlspecialchars($motdCurrent) ?></textarea>
                 <p><button type="submit">Speichern</button></p>
             </form>
+        </section>
+
+        <?php
+        require __DIR__ . '/expeditions-lib.php';
+        $expeditions = load_expeditions();
+        usort($expeditions, static fn($a, $b) => ($a['year'] ?? 0) <=> ($b['year'] ?? 0));
+        ?>
+        <section class="account-section" id="expeditionen-bereich">
+            <h2>Expeditionen</h2>
+            <p>Neue Expedition anlegen oder bestehende bearbeiten/löschen. Änderungen erscheinen sofort auf der öffentlichen Website.</p>
+
+            <?php foreach ($expeditions as $exp): ?>
+                <details class="expedition-entry">
+                    <summary><?= htmlspecialchars((string) $exp['year']) ?> &ndash; <?= htmlspecialchars($exp['location']) ?></summary>
+
+                    <?php if (!empty($exp['images'])): ?>
+                        <div class="expedition-thumbs">
+                            <?php foreach ($exp['images'] as $image): ?>
+                                <div class="expedition-thumb">
+                                    <img src="/expedition-image.php?f=<?= urlencode($image['filename']) ?>" alt="">
+                                    <form method="post" action="expeditions-save.php" onsubmit="return confirm('Bild wirklich löschen?');">
+                                        <input type="hidden" name="action" value="delete-image">
+                                        <input type="hidden" name="id" value="<?= htmlspecialchars($exp['id']) ?>">
+                                        <input type="hidden" name="filename" value="<?= htmlspecialchars($image['filename']) ?>">
+                                        <button type="submit" title="Bild löschen">&times;</button>
+                                    </form>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                    <p style="font-size:0.85rem; color:#777;"><?= count($exp['images']) ?>/8 Bilder</p>
+
+                    <form method="post" action="expeditions-save.php" enctype="multipart/form-data">
+                        <input type="hidden" name="action" value="update">
+                        <input type="hidden" name="id" value="<?= htmlspecialchars($exp['id']) ?>">
+                        <label>Jahr<br><input type="number" name="year" value="<?= htmlspecialchars((string) $exp['year']) ?>" required></label><br>
+                        <label>Ort / Angelplatz<br><input type="text" name="location" style="width:100%;" value="<?= htmlspecialchars($exp['location']) ?>" required></label><br>
+                        <label>Beschreibung<br><textarea name="description" rows="3" style="width:100%;" required><?= htmlspecialchars($exp['description']) ?></textarea></label><br>
+                        <label>Instagram-Link (Story-Highlight, optional)<br><input type="url" name="instagramUrl" style="width:100%;" value="<?= htmlspecialchars($exp['instagramUrl']) ?>"></label><br>
+                        <label>Instagram-Linktext<br><input type="text" name="instagramLabel" style="width:100%;" value="<?= htmlspecialchars($exp['instagramLabel']) ?>"></label><br>
+                        <label>Flagge/Emoji<br><input type="text" name="flagEmoji" value="<?= htmlspecialchars($exp['flagEmoji']) ?>"></label><br>
+                        <label><input type="checkbox" name="highlight" <?= !empty($exp['highlight']) ? 'checked' : '' ?>> Als besonders hervorheben (Rahmen)</label><br>
+                        <label>Weitere Bilder hinzufügen<br><input type="file" name="images[]" multiple accept="image/jpeg,image/png,image/webp"></label><br>
+                        <p><button type="submit">Änderungen speichern</button></p>
+                    </form>
+
+                    <form method="post" action="expeditions-save.php" onsubmit="return confirm('Diese Expedition wirklich vollständig löschen?');">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="id" value="<?= htmlspecialchars($exp['id']) ?>">
+                        <button type="submit">Expedition löschen</button>
+                    </form>
+                </details>
+            <?php endforeach; ?>
+
+            <details class="expedition-entry">
+                <summary>Neue Expedition hinzufügen</summary>
+                <form method="post" action="expeditions-save.php" enctype="multipart/form-data">
+                    <input type="hidden" name="action" value="create">
+                    <label>Jahr<br><input type="number" name="year" required></label><br>
+                    <label>Ort / Angelplatz<br><input type="text" name="location" style="width:100%;" required></label><br>
+                    <label>Beschreibung<br><textarea name="description" rows="3" style="width:100%;" required></textarea></label><br>
+                    <label>Instagram-Link (Story-Highlight, optional &ndash; kann sp&auml;ter erg&auml;nzt werden)<br><input type="url" name="instagramUrl" style="width:100%;" placeholder="https://www.instagram.com/stories/highlights/..."></label><br>
+                    <label>Instagram-Linktext<br><input type="text" name="instagramLabel" style="width:100%;" placeholder="z. B. MobOut2027"></label><br>
+                    <label>Flagge/Emoji<br><input type="text" name="flagEmoji" placeholder="🌊"></label><br>
+                    <label><input type="checkbox" name="highlight"> Als besonders hervorheben (Rahmen)</label><br>
+                    <label>Bilder (bis zu 8)<br><input type="file" name="images[]" multiple accept="image/jpeg,image/png,image/webp"></label><br>
+                    <p><button type="submit">Expedition anlegen</button></p>
+                </form>
+            </details>
         </section>
 
         <a class="back-link" href="/">&larr; Zurück zur öffentlichen Seite</a>
