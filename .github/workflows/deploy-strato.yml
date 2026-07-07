@@ -20,6 +20,11 @@ jobs:
             echo "path=/mnt/web410/c1/52/59703252/htdocs/mobout.de/staging/" >> $GITHUB_OUTPUT
           fi
 
+      - name: Inject build info
+        run: |
+          BUILD_INFO="Commit: ${{ github.sha }} | ${{ github.event.head_commit.timestamp }}"
+          sed -i "s|__BUILD_INFO__|$BUILD_INFO|g" index.html
+
       - name: Deploy to Strato
         run: |
           mkdir -p ~/.ssh
