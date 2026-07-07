@@ -143,6 +143,15 @@
             opacity: 0.95;
         }
 
+        .motd-banner {
+            margin-top: 1.5rem;
+            padding: 0.8rem 1.5rem;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            display: inline-block;
+            font-size: 1rem;
+        }
+
         .cta-button {
             display: inline-block;
             background-color: var(--accent-color);
@@ -1060,17 +1069,10 @@
             .then(text => {
                 const msg = text.trim();
                 if (!msg) return;
-                const box = document.createElement('div');
-                box.className = 'contact-item';
-                const icon = document.createElement('div');
-                icon.className = 'contact-item-icon';
-                icon.textContent = '📢';
-                const h3 = document.createElement('h3');
-                h3.textContent = 'Nachricht des Tages';
-                const p = document.createElement('p');
-                p.textContent = msg;
-                box.append(icon, h3, p);
-                document.querySelector('.contact-info').appendChild(box);
+                const banner = document.createElement('p');
+                banner.className = 'motd-banner';
+                banner.textContent = '📢 ' + msg;
+                document.querySelector('.hero-content').appendChild(banner);
             })
             .catch(() => {});
 

@@ -108,8 +108,8 @@ erscheint automatisch auf der öffentlichen Website" zu validieren:
 - `motd.php` (Repo-Root, **nicht** durch Basic Auth geschützt) liest die Datei serverseitig vom
   Dateisystem aus und liefert sie escaped als Klartext aus – funktioniert trotz Apache-Auth auf
   `mitglieder/`, weil diese nur HTTP-Requests durch Apache betrifft, nicht lokale Dateisystemzugriffe.
-- `index.html` lädt `motd.php` per `fetch()` und blendet die Nachricht unter "Kontakt &
-  Informationen" ein – nur wenn ein Text gesetzt ist, sonst nichts.
+- `index.html` lädt `motd.php` per `fetch()` und blendet die Nachricht als Banner im Hero-Bereich
+  (unter dem "Kontaktiere uns"-Button) ein – nur wenn ein Text gesetzt ist, sonst nichts.
 
 ---
 
