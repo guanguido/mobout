@@ -101,8 +101,10 @@ erscheint automatisch auf der öffentlichen Website" zu validieren:
 - Mitglied trägt im Mitgliederbereich (Karte "Nachricht des Tages") einen Text ein und speichert
   über `mitglieder/motd-save.php` (liegt im geschützten Verzeichnis, erbt den Basic-Auth-Schutz
   automatisch). Der Text landet in `mitglieder/data/motd.txt` auf dem Server.
-- `mitglieder/data/` ist **git-ignoriert** (server-only) – überlebt Deploys, weil rsync ohne
-  `--delete`-Flag läuft und Dateien, die im Git-Checkout fehlen, weder hochlädt noch löscht.
+- `mitglieder/data/` ist **git-ignoriert** (server-only). Der Deploy-Workflow nutzt `rsync --delete`
+  (damit umbenannte/gelöschte Dateien wie alte `.html`-Versionen wirklich vom Server verschwinden),
+  schließt `mitglieder/data/` aber explizit per `--exclude=data/` von der Löschung aus, damit
+  `motd.txt` Deploys übersteht.
 - `motd.php` (Repo-Root, **nicht** durch Basic Auth geschützt) liest die Datei serverseitig vom
   Dateisystem aus und liefert sie escaped als Klartext aus – funktioniert trotz Apache-Auth auf
   `mitglieder/`, weil diese nur HTTP-Requests durch Apache betrifft, nicht lokale Dateisystemzugriffe.

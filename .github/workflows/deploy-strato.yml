@@ -39,7 +39,7 @@ jobs:
           echo "${{ secrets.STRATO_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.STRATO_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
-          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+          rsync -avz --delete --exclude=data/ -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
             index.html \
             motd.php \
             mitglieder \
