@@ -23,7 +23,7 @@ jobs:
       - name: Inject build info
         run: |
           BUILD_INFO="Commit: ${{ github.sha }} | ${{ github.event.head_commit.timestamp }}"
-          sed -i "s|__BUILD_INFO__|$BUILD_INFO|g" index.html
+          sed -i "s#__BUILD_INFO__#$BUILD_INFO#g" index.html
 
       - name: Deploy to Strato
         run: |
