@@ -32,6 +32,7 @@ Deutsch (de)
 
 - Domain: www.mobout.de
 - E-Mail: info@mobout.de
+- Instagram: @mobout.de (https://www.instagram.com/mobout.de) – gemeinsames Gruppenkonto, verlinkt aus dem Bereich „Expeditionen" in index.html
 
 ---
 
