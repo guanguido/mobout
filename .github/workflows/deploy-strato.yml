@@ -43,5 +43,7 @@ jobs:
             index.html \
             motd.php \
             contact.php \
+            expeditions.php \
+            expedition-image.php \
             mitglieder \
             ${{ secrets.STRATO_USER }}@${{ secrets.STRATO_HOST }}:${{ steps.target.outputs.path }}

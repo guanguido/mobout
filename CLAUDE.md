@@ -13,10 +13,15 @@ mobout/
 ├── index.html          # Haupt-HTML (Single-Page, enthält CSS + JS, Bilder als Base64 eingebettet)
 ├── motd.php            # Öffentlicher Lese-Endpunkt für die "Nachricht des Tages" (kein Basic Auth)
 ├── contact.php          # Öffentlicher Endpunkt für das Kontaktformular (kein Basic Auth), versendet per mail()
+├── expeditions.php      # Öffentlicher Lese-Endpunkt für die Expeditionsliste als JSON (kein Basic Auth)
+├── expedition-image.php # Öffentlicher Bild-Streaming-Endpunkt für Expeditionsfotos (kein Basic Auth)
 ├── mitglieder/         # Passwortgeschützter Mitgliederbereich (Basic Auth)
-│   ├── index.php       # Eigenständige Seite (eigenes CSS, Logo als Base64); rendert MOTD-Formular serverseitig
+│   ├── index.php       # Eigenständige Seite (eigenes CSS, Logo als Base64); rendert MOTD- und Expeditionen-Formulare serverseitig
 │   ├── motd-save.php   # Schreib-Endpunkt für die MOTD, geschützt durch .htaccess der Umgebung
-│   ├── data/           # Nur serverseitig, git-ignoriert (motd.txt) – überlebt Deploys
+│   ├── expeditions-save.php  # CRUD-Schreib-Endpunkt für Expeditionen (action=create/update/delete/delete-image)
+│   ├── expeditions-lib.php   # Gemeinsame load/save-Funktionen inkl. Seeding-Logik
+│   ├── expeditions-seed.json # Git-getrackter Ausgangsbestand der 8 historischen Expeditionen
+│   ├── data/           # Nur serverseitig, git-ignoriert (motd.txt, expeditions.json, expeditions-images/) – überlebt Deploys
 │   ├── .htaccess       # Basic-Auth-Konfiguration (Auth-Pfad wird beim Deploy injiziert)
 │   └── .htpasswd       # Ein Nutzer, bcrypt-Hash des gemeinsamen Passworts
 ├── assets/
@@ -31,9 +36,10 @@ mobout/
 - Reines HTML/CSS/JavaScript (kein Framework, kein Build-System)
 - Single-Page mit Smooth-Scroll-Navigation
 - Responsive Design mit Hamburger-Menü für Mobile (≤768px)
-- Punktuell PHP (Strato-Hosting, PHP 8.3) für die "Nachricht des Tages" und das Kontaktformular –
-  beschränkt auf `mitglieder/index.php`, `mitglieder/motd-save.php`, `motd.php` und `contact.php`,
-  siehe eigene Abschnitte unten
+- Punktuell PHP (Strato-Hosting, PHP 8.3) für die "Nachricht des Tages", das Kontaktformular und die
+  dynamische Expeditionen-Verwaltung – beschränkt auf `mitglieder/index.php`, `mitglieder/motd-save.php`,
+  `motd.php`, `contact.php`, `expeditions.php`, `expedition-image.php`, `mitglieder/expeditions-save.php`
+  und `mitglieder/expeditions-lib.php`, siehe eigene Abschnitte unten
 
 ## Sprache
 
@@ -69,11 +75,14 @@ Skripte im Scratchpad ablegen, nie direkt in PowerShell inline schreiben (Quotin
 
 ## Inhaltsdaten
 
-Die Excel-Dateien in `assets/data/` sind die Quelle der Wahrheit für:
-- **MobOut_Teilnehmer.xlsx**: Name, Spitzname, Rolle (Kern-Crew/Gastangler/Anwärter), Dabei seit, Expeditionsjahre, Beschreibung
-- **MobOut_Expeditionen.xlsx**: Jahr, Datum, Zielort, Teilnehmer, Besonderheiten, Fänge
+Die Excel-Datei `assets/data/MobOut_Teilnehmer.xlsx` ist weiterhin die Quelle der Wahrheit für die
+Teilnehmerdaten (Name, Spitzname, Rolle, Dabei seit, Expeditionsjahre, Beschreibung) – diese sind
+nach wie vor als hartcodierter Text in `index.html` eingebaut (kein dynamisches Laden).
 
-Aktuell sind diese Daten als hartcodierter Text in `index.html` eingebaut (kein dynamisches Laden).
+Die Expeditionsdaten (Jahr, Ort/Angelplatz, Beschreibung, Instagram-Link, Fotogalerie) sind seit der
+dynamischen Expeditionen-Verwaltung **nicht mehr hartcodiert**, siehe Abschnitt „Expeditionen
+(dynamisch)" unten. `assets/data/MobOut_Expeditionen.xlsx` ist dadurch nicht mehr Quelle der Wahrheit,
+sondern nur noch optionale historische Referenz.
 
 ## Mitgliederbereich (`mitglieder/`)
 
@@ -132,6 +141,43 @@ Das Formular im Abschnitt "Kontakt & Informationen" sendet per `fetch()` an `con
   als Ausweichkontakt).
 - Der Deploy-Workflow überträgt `contact.php` zusätzlich zu `index.html` und `motd.php`.
 
+## Expeditionen (dynamisch)
+
+Erweitert den MOTD-Mechanismus um volle CRUD-Verwaltung mit Bild-Uploads: Mitglieder können
+Expeditionen (Jahr, Ort/Angelplatz, Beschreibung, optionaler Instagram-Link, Foto-Galerie) im
+Mitgliederbereich anlegen, bearbeiten und löschen – die öffentliche Website zeigt das automatisch,
+ohne neuen Deploy.
+
+- **Daten:** `mitglieder/data/expeditions.json` (git-ignoriert, server-only, wie `motd.txt`), ein
+  JSON-Array aller Expeditionen. Bilder liegen als echte Dateien in
+  `mitglieder/data/expeditions-images/` (ebenfalls git-ignoriert, gleicher `--exclude=data/`-Schutz
+  beim Deploy).
+- **Automatisches Seeding:** Solange `mitglieder/data/expeditions.json` noch nicht existiert (z. B.
+  frisch aufgesetzte Umgebung), liefert `mitglieder/expeditions-lib.php`s `load_expeditions()`
+  stattdessen den Ausgangsbestand aus der **git-getrackten** `mitglieder/expeditions-seed.json`
+  (die 8 historischen Expeditionen 2019–2026). Sobald ein Mitglied zum ersten Mal etwas
+  anlegt/bearbeitet/löscht, schreibt `save_expeditions()` die echte Datendatei – ab dann ist die
+  Seed-Datei für den laufenden Betrieb irrelevant, bleibt aber als dokumentierter Startbestand im
+  Repo. Kein manueller Schritt auf Staging/Produktion nötig.
+- **Schreiben:** `mitglieder/expeditions-save.php` (geschützt durch `.htaccess`) verarbeitet alle
+  Mutationen über einen `action`-Parameter (`create` / `update` / `delete` / `delete-image`),
+  inklusive Bild-Upload-Validierung (Whitelist jpg/jpeg/png/webp, `getimagesize()`-Check, max. 5 MB
+  pro Bild, max. 8 Bilder pro Expedition, serverseitig generierte Dateinamen statt Original-Namen).
+- **Lesen:** `expeditions.php` (Repo-Root, **nicht** durch Basic Auth geschützt) liest die Daten
+  serverseitig vom Dateisystem – funktioniert wie `motd.php` trotz Apache-Auth auf `mitglieder/`,
+  da reiner Dateisystemzugriff keine HTTP-Requests auf das geschützte Verzeichnis sind.
+- **Bilder ausliefern:** `expedition-image.php` (Repo-Root, ebenfalls kein Basic Auth) liest eine
+  einzelne Bilddatei aus `mitglieder/data/expeditions-images/` und streamt sie mit passendem
+  `Content-Type`. Enthält strikten Pfad-Traversal-Schutz (`basename()`-Check + `realpath()`-
+  Containment-Prüfung), damit über den `f`-Parameter keine beliebigen Dateien ausgelesen werden
+  können.
+- **Instagram-Link:** pro Expedition **optional** und individuell (Story-Highlight-Link, Format
+  `https://www.instagram.com/stories/highlights/<id>/`), nicht mehr der frühere feste Link zum
+  Gruppenprofil. Fehlt der Link, wird im Kartenfooter einfach kein Instagram-Link angezeigt.
+- `index.html` lädt die Liste per `fetch('/expeditions.php')` und baut die `.exp-card`-Elemente
+  dynamisch per DOM auf (`textContent`/Property-Zuweisungen, nie `innerHTML`), inklusive Galerie-
+  Thumbnails über `expedition-image.php`.
+
 ---
 
 # Deployment-Kontext
@@ -147,7 +193,7 @@ Das Formular im Abschnitt "Kontakt & Informationen" sendet per `fetch()` an `con
 - Secrets vorhanden: `STRATO_SSH_KEY`, `STRATO_HOST`, `STRATO_USER`
 - Zwei-Ziel-Push: `git push origin <branch>` geht an NAS (Master-Backup) + GitHub
 - Pull nur vom NAS (`origin` fetch = NAS, push = NAS + GitHub)
-- Übertragen werden `index.html` + `motd.php` + `mitglieder/` (wenn `assets/` deployrelevant wird: Workflow anpassen)
+- Übertragen werden `index.html` + `motd.php` + `contact.php` + `expeditions.php` + `expedition-image.php` + `mitglieder/` (wenn `assets/` deployrelevant wird: Workflow anpassen)
 
 ## Arbeitsweise
 
