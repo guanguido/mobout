@@ -11,6 +11,10 @@ Statische Website für die Angelgruppe MobOut (www.mobout.de). Die Gruppe fährt
 ```
 mobout/
 ├── index.html          # Haupt-HTML (Single-Page, enthält CSS + JS, Bilder als Base64 eingebettet)
+├── mitglieder/         # Passwortgeschützter Mitgliederbereich (Basic Auth)
+│   ├── index.html      # Eigenständige Seite (eigenes CSS, Logo als Base64)
+│   ├── .htaccess       # Basic-Auth-Konfiguration (Auth-Pfad wird beim Deploy injiziert)
+│   └── .htpasswd       # Ein Nutzer, bcrypt-Hash des gemeinsamen Passworts
 ├── assets/
 │   ├── images/         # Originalfotos (Personenbilder, Logos)
 │   └── data/           # Excel-Tabellen (MobOut_Teilnehmer.xlsx, MobOut_Expeditionen.xlsx)
@@ -64,6 +68,20 @@ Die Excel-Dateien in `assets/data/` sind die Quelle der Wahrheit für:
 
 Aktuell sind diese Daten als hartcodierter Text in `index.html` eingebaut (kein dynamisches Laden).
 
+## Mitgliederbereich (`mitglieder/`)
+
+Passwortgeschützter interner Bereich unter `mobout.de/mitglieder/` (eigene URL, nicht Teil der
+Single-Page). Verlinkt aus der Hauptnavigation in `index.html` (Link `.nav-members`).
+
+- **Schutz:** HTTP Basic Auth über `.htaccess` (Strato = Apache). Ein Nutzer, **ein Passwort für alle**.
+- **Passwort:** `.htpasswd` mit bcrypt-Hash, **im Repo** eingecheckt (Repo ist privat).
+  Ändern: neuen Hash erzeugen (`htpasswd -nbB mitglied '<PASSWORT>'`), committen, deployen.
+- **Auth-Pfad:** `.htaccess` enthält Platzhalter `__HTPASSWD_PATH__`, der beim Deploy pro Branch
+  durch den absoluten Serverpfad ersetzt wird (analog zu `__BUILD_INFO__`).
+- **Seite:** `mitglieder/index.html` ist eigenständig (eigenes CSS, Logo als Base64), da `assets/`
+  nicht auf den Server deployt wird.
+- **Grenzen:** nativer Browser-Login (nicht gestaltbar), Logout browserabhängig; nur über HTTPS sicher.
+
 ---
 
 # Deployment-Kontext
@@ -79,7 +97,7 @@ Aktuell sind diese Daten als hartcodierter Text in `index.html` eingebaut (kein 
 - Secrets vorhanden: `STRATO_SSH_KEY`, `STRATO_HOST`, `STRATO_USER`
 - Zwei-Ziel-Push: `git push origin <branch>` geht an NAS (Master-Backup) + GitHub
 - Pull nur vom NAS (`origin` fetch = NAS, push = NAS + GitHub)
-- Aktuell wird nur `index.html` übertragen (wenn `assets/` deployrelevant wird: Workflow anpassen)
+- Übertragen werden `index.html` + `mitglieder/` (wenn `assets/` deployrelevant wird: Workflow anpassen)
 
 ## Arbeitsweise
 

@@ -28,6 +28,11 @@ jobs:
           BUILD_INFO="$SHORT_SHA | $BUILD_TS"
           sed -i "s#__BUILD_INFO__#$BUILD_INFO#g" index.html
 
+      - name: Inject member-area auth path
+        run: |
+          DEPLOY_PATH="${{ steps.target.outputs.path }}"
+          sed -i "s#__HTPASSWD_PATH__#${DEPLOY_PATH}mitglieder/.htpasswd#g" mitglieder/.htaccess
+
       - name: Deploy to Strato
         run: |
           mkdir -p ~/.ssh
@@ -36,4 +41,5 @@ jobs:
           ssh-keyscan -H ${{ secrets.STRATO_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
           rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
             index.html \
+            mitglieder \
             ${{ secrets.STRATO_USER }}@${{ secrets.STRATO_HOST }}:${{ steps.target.outputs.path }}

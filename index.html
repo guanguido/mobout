@@ -108,6 +108,17 @@
             border-bottom-color: var(--accent-color);
         }
 
+        nav a.nav-members {
+            background: rgba(255,255,255,0.15);
+            padding: 0.4rem 0.9rem;
+            border-radius: 6px;
+            border-bottom: none;
+        }
+        nav a.nav-members:hover {
+            background: var(--accent-color);
+            border-bottom: none;
+        }
+
         .hero {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
@@ -634,6 +645,7 @@
                 <a href="#team">Team</a>
                 <a href="#gallery">Galerie</a>
                 <a href="#contact">Kontakt</a>
+                <a href="/mitglieder/" class="nav-members">Mitglieder</a>
             </nav>
             <button class="hamburger" id="hamburger" aria-label="Menü öffnen"><span></span><span></span><span></span></button>
         </div>
