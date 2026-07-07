@@ -1,0 +1,3 @@
+# Auth-Dateien müssen LF haben, sonst bricht Apache Basic Auth (CR im Hash)
+mitglieder/.htaccess text eol=lf
+mitglieder/.htpasswd text eol=lf
