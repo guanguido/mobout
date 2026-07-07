@@ -41,5 +41,6 @@ jobs:
           ssh-keyscan -H ${{ secrets.STRATO_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
           rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
             index.html \
+            motd.php \
             mitglieder \
             ${{ secrets.STRATO_USER }}@${{ secrets.STRATO_HOST }}:${{ steps.target.outputs.path }}
