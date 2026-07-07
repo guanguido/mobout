@@ -80,17 +80,6 @@ Aktuell sind diese Daten als hartcodierter Text in `index.html` eingebaut (kein 
 - Pull nur vom NAS (`origin` fetch = NAS, push = NAS + GitHub)
 - Aktuell wird nur `index.html` übertragen (wenn `assets/` deployrelevant wird: Workflow anpassen)
 
-## Offene Aufgaben (Claude Code)
-
-1. Branch `develop` von `master` abzweigen und pushen
-2. Workflow branch-abhängig machen: `master` → production-Pfad, `develop` → staging-Pfad
-
-## Manuell (NICHT Claude Code — über Strato-Panel/SSH)
-
-- Staging-Ordner `/htdocs/mobout.de/staging/` anlegen
-- Subdomain `staging.mobout.de` auf diesen Ordner zeigen
-- Staging: Passwortschutz + noindex
-
 ## Arbeitsweise
 
 - Ein Entwickler: direkt auf `develop` arbeiten, dann nach `master` mergen für Produktion
