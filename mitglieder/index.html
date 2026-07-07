@@ -66,6 +66,10 @@
         }
         .card h2 { color: var(--primary-color); font-size: 1.25rem; margin-bottom: 0.75rem; }
         .card p { color: #555; }
+        .card p + p { margin-top: 0.75rem; }
+        .account-info { margin: 1rem 0; display: grid; grid-template-columns: auto 1fr; gap: 0.35rem 0.75rem; }
+        .account-info dt { color: var(--primary-color); font-weight: 600; }
+        .account-info dd { color: #555; }
         .badge {
             display: inline-block; background: var(--accent-color); color: white;
             font-size: 0.7rem; font-weight: 600; letter-spacing: 0.03em;
@@ -118,6 +122,20 @@
             <div class="card">
                 <h2>Downloads</h2>
                 <p>Packlisten, Vorlagen und Dokumente zum Herunterladen &ndash; in Vorbereitung.</p>
+            </div>
+            <div class="card">
+                <h2>Navionics Account</h2>
+                <p>Gemeinsamer Account für die Navionics-App (Boating HD) &ndash; zeigt Tiefenkarten und Bodenbeschaffenheit beim Angeln. Für alle Mitglieder nutzbar.</p>
+                <dl class="account-info">
+                    <dt>Inhaber</dt><dd>Andre Schlieper</dd>
+                    <dt>Login</dt><dd>andre.schlieper@googlemail.com</dd>
+                    <dt>Passwort</dt><dd>J$C6qJ$C6q</dd>
+                    <dt>App</dt><dd>Navionics Boating HD</dd>
+                    <dt>Karten</dt><dd>Navionics+ Central&amp;West Europe, Baltic Sea (NMEU644L)</dd>
+                    <dt>Verwaltung</dt><dd>Google Play, Jahres-Abo 59,99&nbsp;&euro;</dd>
+                    <dt>Läuft ab</dt><dd>14.05.2027</dd>
+                </dl>
+                <p><a href="https://www.navionics.com" target="_blank" rel="noopener">navionics.com</a></p>
             </div>
         </div>
         <a class="back-link" href="/">&larr; Zurück zur öffentlichen Seite</a>
