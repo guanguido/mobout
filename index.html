@@ -1054,6 +1054,26 @@
             this.reset();
         });
 
+        // Nachricht des Tages (falls vorhanden)
+        fetch('/motd.php')
+            .then(r => r.ok ? r.text() : '')
+            .then(text => {
+                const msg = text.trim();
+                if (!msg) return;
+                const box = document.createElement('div');
+                box.className = 'contact-item';
+                const icon = document.createElement('div');
+                icon.className = 'contact-item-icon';
+                icon.textContent = '📢';
+                const h3 = document.createElement('h3');
+                h3.textContent = 'Nachricht des Tages';
+                const p = document.createElement('p');
+                p.textContent = msg;
+                box.append(icon, h3, p);
+                document.querySelector('.contact-info').appendChild(box);
+            })
+            .catch(() => {});
+
         // Hamburger menu toggle
         const hamburger = document.getElementById('hamburger');
         const nav = document.querySelector('nav');

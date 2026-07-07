@@ -135,6 +135,11 @@
                 <p>Gemeinsamer Account für die Navionics-App (Boating HD) &ndash; zeigt Tiefenkarten und Bodenbeschaffenheit beim Angeln.</p>
                 <p><a href="#navionics-zugangsdaten">Zugangsdaten ansehen &rarr;</a></p>
             </div>
+            <div class="card">
+                <h2>Nachricht des Tages</h2>
+                <p>Kurze Nachricht, die auf der öffentlichen Website im Kontaktbereich angezeigt wird, solange sie gesetzt ist.</p>
+                <p><a href="#motd-bereich">Nachricht bearbeiten &rarr;</a></p>
+            </div>
         </div>
 
         <section class="account-section" id="navionics-zugangsdaten">
@@ -146,6 +151,19 @@
                 <dt>Karten</dt><dd>Navionics+ Central&amp;West Europe, Baltic Sea (NMEU644L)</dd>
                 <dt>Läuft ab</dt><dd>14.05.2027</dd>
             </dl>
+        </section>
+
+        <?php
+        $motdFile = __DIR__ . '/data/motd.txt';
+        $motdCurrent = is_file($motdFile) ? file_get_contents($motdFile) : '';
+        ?>
+        <section class="account-section" id="motd-bereich">
+            <h2>Nachricht des Tages</h2>
+            <p>Wird auf der öffentlichen Website unter "Kontakt &amp; Informationen" angezeigt, solange das Feld nicht leer ist.</p>
+            <form method="post" action="motd-save.php">
+                <textarea name="motd" maxlength="500" rows="4" style="width:100%;"><?= htmlspecialchars($motdCurrent) ?></textarea>
+                <p><button type="submit">Speichern</button></p>
+            </form>
         </section>
 
         <a class="back-link" href="/">&larr; Zurück zur öffentlichen Seite</a>
