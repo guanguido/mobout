@@ -22,7 +22,10 @@ jobs:
 
       - name: Inject build info
         run: |
-          BUILD_INFO="Commit: ${{ github.sha }} | ${{ github.event.head_commit.timestamp }}"
+          SHORT_SHA="${{ github.sha }}"
+          SHORT_SHA="${SHORT_SHA:0:7}"
+          BUILD_TS=$(date -d "${{ github.event.head_commit.timestamp }}" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "${{ github.event.head_commit.timestamp }}")
+          BUILD_INFO="$SHORT_SHA | $BUILD_TS"
           sed -i "s#__BUILD_INFO__#$BUILD_INFO#g" index.html
 
       - name: Deploy to Strato
