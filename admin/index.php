@@ -216,7 +216,8 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                         </select>
                     </label>
                     <label>Kurztext<textarea name="text" rows="3"></textarea></label>
-                    <label>Icon (Kürzel/Emoji, wird angezeigt, wenn kein Foto vorhanden ist)<input type="text" name="icon" maxlength="4" placeholder="z. B. A oder 🎣"></label>
+                    <label>Ersatz-Icon (Kürzel/Emoji – nur sichtbar, wenn kein Foto vorhanden ist)<input type="text" name="icon" maxlength="4" placeholder="z. B. A oder 🎣"></label>
+                    <label>Kleines Icon nach dem Text (Emoji, optional)<input type="text" name="emoji" maxlength="20" placeholder="z. B. 🎣"></label>
                     <label>Foto (optional, jpg/png/webp, max. 5 MB)<input type="file" name="image" accept="image/jpeg,image/png,image/webp"></label>
                     <button type="submit">Mitglied anlegen</button>
                 </form>
@@ -254,7 +255,8 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                                     </select>
                                 </label>
                                 <label>Kurztext<textarea name="text" rows="3"><?= h($m['text'] ?? '') ?></textarea></label>
-                                <label>Icon (Kürzel/Emoji, Fallback ohne Foto)<input type="text" name="icon" maxlength="4" value="<?= h($m['icon'] ?? '') ?>"></label>
+                                <label>Ersatz-Icon (Kürzel/Emoji – Fallback ohne Foto)<input type="text" name="icon" maxlength="4" value="<?= h($m['icon'] ?? '') ?>"></label>
+                                <label>Kleines Icon nach dem Text (Emoji, optional)<input type="text" name="emoji" maxlength="20" value="<?= h($m['emoji'] ?? '') ?>"></label>
                                 <label><?= !empty($m['image']) ? 'Foto ersetzen' : 'Foto hinzufügen' ?> (optional, jpg/png/webp, max. 5 MB)<input type="file" name="image" accept="image/jpeg,image/png,image/webp"></label>
                                 <button type="submit">Änderungen speichern</button>
                             </form>

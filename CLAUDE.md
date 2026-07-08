@@ -218,8 +218,11 @@ Admin. Übernimmt das Seed-/`data/`-Prinzip der Expeditionen. **Begriffe strikt 
 
 **Datenmodell:** `mitglieder/data/members.json` (git-ignoriert, server-only), JSON-Array. Ein Mitglied:
 `id`, `name` (Anzeigename), `role` (`team` | `supporter` | `anwaerter`), `text` (Kurztext),
-`icon` (Kürzel/Emoji, Fallback-Avatar wenn kein Foto), `image` (Dateiname, optional, ein Foto),
-`createdAt`/`updatedAt`. **Reihenfolge = Anzeige-Reihenfolge** (kein Sortieren; neue Einträge ans Ende).
+`icon` (Kürzel/Emoji, Ersatz-Avatar **wenn kein Foto**), `emoji` (kleines Icon **nach dem Text**,
+optional, unabhängig vom Foto), `image` (Dateiname, optional, ein Foto), `createdAt`/`updatedAt`.
+Die beiden Icon-Felder sind bewusst getrennt: `icon` ersetzt das Foto, `emoji` ist ein dekoratives
+Symbol hinter dem Beschreibungstext. **Reihenfolge = Anzeige-Reihenfolge** (kein Sortieren; neue
+Einträge ans Ende).
 
 **Rollen → Sektion in `index.html`:** `team` → „Das Team", `supporter` → „Dabei waren auch",
 `anwaerter` → „Anwärter" (Grid oberhalb der Expeditionen). Container-IDs: `#team-grid`,

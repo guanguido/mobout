@@ -937,6 +937,7 @@
                         h3.textContent = m.name || '';
                         var p = document.createElement('p');
                         p.textContent = m.text || '';
+                        if (m.emoji) { p.appendChild(document.createTextNode(' ' + m.emoji)); }
                         card.appendChild(avatar);
                         card.appendChild(h3);
                         card.appendChild(p);

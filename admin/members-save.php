@@ -67,6 +67,7 @@ if ($action === 'create') {
     $name = trim((string) ($_POST['name'] ?? ''));
     $text = trim((string) ($_POST['text'] ?? ''));
     $icon = trim((string) ($_POST['icon'] ?? ''));
+    $emoji = trim((string) ($_POST['emoji'] ?? ''));
     $role = normalize_role((string) ($_POST['role'] ?? ''));
 
     if ($name === '') {
@@ -81,6 +82,7 @@ if ($action === 'create') {
         'role' => $role,
         'text' => substr($text, 0, 600),
         'icon' => mb_substr($icon !== '' ? $icon : mb_substr($name, 0, 1), 0, 4),
+        'emoji' => mb_substr($emoji, 0, 16),
         'image' => store_member_image($id, null),
         'createdAt' => $now,
         'updatedAt' => $now,
@@ -101,6 +103,7 @@ if ($action === 'update') {
         $name = trim((string) ($_POST['name'] ?? $entry['name']));
         $text = trim((string) ($_POST['text'] ?? ($entry['text'] ?? '')));
         $icon = trim((string) ($_POST['icon'] ?? ($entry['icon'] ?? '')));
+        $emoji = trim((string) ($_POST['emoji'] ?? ($entry['emoji'] ?? '')));
 
         if ($name !== '') {
             $entry['name'] = substr($name, 0, 80);
@@ -108,6 +111,7 @@ if ($action === 'update') {
         $entry['role'] = normalize_role((string) ($_POST['role'] ?? ''), $entry['role'] ?? 'team');
         $entry['text'] = substr($text, 0, 600);
         $entry['icon'] = mb_substr($icon !== '' ? $icon : mb_substr($entry['name'], 0, 1), 0, 4);
+        $entry['emoji'] = mb_substr($emoji, 0, 16);
         $entry['image'] = store_member_image($entry['id'], $entry['image'] ?? null);
         $entry['updatedAt'] = date('c');
         break;
