@@ -77,6 +77,10 @@
         .account-info { display: grid; grid-template-columns: auto 1fr; gap: 0.35rem 0.75rem; }
         .account-info dt { color: var(--primary-color); font-weight: 600; }
         .account-info dd { color: #555; }
+        .account-section h3 { color: var(--primary-color); font-size: 1.05rem; margin: 1.35rem 0 0.5rem; }
+        .account-section ol { color: #555; margin: 0.25rem 0 0 1.2rem; padding: 0; }
+        .account-section ol li { margin-bottom: 0.35rem; }
+        .account-section code { background: #eef2f5; padding: 0.05rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
         .badge {
             display: inline-block; background: var(--accent-color); color: white;
             font-size: 0.7rem; font-weight: 600; letter-spacing: 0.03em;
@@ -135,6 +139,11 @@
                 <p><a href="#expeditionen-bereich">Expeditionen verwalten &rarr;</a></p>
             </div>
             <div class="card">
+                <h2>Instagram</h2>
+                <p>Geteilter MobOut-Account &ndash; Zugangsdaten und eine kurze Anleitung, wie du Bilder postest, die auch auf der Website erscheinen.</p>
+                <p><a href="#instagram-bereich">Zugangsdaten &amp; Anleitung &rarr;</a></p>
+            </div>
+            <div class="card">
                 <h2>Navionics Account</h2>
                 <p>Gemeinsamer Account für die Navionics-App (Boating HD) &ndash; zeigt Tiefenkarten und Bodenbeschaffenheit beim Angeln.</p>
                 <p><a href="#navionics-zugangsdaten">Zugangsdaten ansehen &rarr;</a></p>
@@ -155,6 +164,31 @@
                 <dt>Karten</dt><dd>Navionics+ Central&amp;West Europe, Baltic Sea (NMEU644L)</dd>
                 <dt>Läuft ab</dt><dd>14.05.2027</dd>
             </dl>
+        </section>
+
+        <section class="account-section" id="instagram-bereich">
+            <h2>Instagram &ndash; Zugangsdaten &amp; Anleitung</h2>
+            <p>Geteilter MobOut-Account. Alles, was du <strong>aus diesem Account</strong> postest, erscheint automatisch auf der öffentlichen Website (Button &bdquo;Alle Stories auf Instagram&ldquo;).</p>
+            <dl class="account-info">
+                <dt>Profil</dt><dd><a href="https://www.instagram.com/mobout.de" target="_blank" rel="noopener">instagram.com/mobout.de</a></dd>
+                <dt>Benutzername</dt><dd>mobout.de</dd>
+                <dt>Passwort</dt><dd>J$CMobout</dd>
+                <dt>E-Mail</dt><dd>info@mobout.de</dd>
+                <dt>Mobilnummer</dt><dd>+49 176 82003004</dd>
+                <dt>Privatsphäre</dt><dd>Privat</dd>
+            </dl>
+
+            <h3>So postest du</h3>
+            <ol>
+                <li>Instagram-App öffnen und mit den obigen Zugangsdaten in <strong>@mobout.de</strong> einloggen. Wenn du schon einen eigenen Account nutzt: über &bdquo;Konto wechseln&ldquo; zu MobOut wechseln.</li>
+                <li>Foto ganz normal als <strong>Beitrag</strong> oder <strong>Story</strong> posten &ndash; als wäre es dein Account.</li>
+                <li>Fertig. Der Beitrag bzw. die Story ist über den Website-Link automatisch erreichbar.</li>
+            </ol>
+
+            <h3>Ich habe schon einen eigenen Account &ndash; reicht das?</h3>
+            <p>Nein. Wenn du aus deinem <strong>eigenen</strong> Account postest und dort nur <code>@mobout.de</code> markierst oder <code>#mobout</code> verwendest, bleibt das Bild in <em>deinem</em> Account und erscheint <strong>nicht</strong> auf instagram.com/mobout.de bzw. der Website. <code>@</code> und <code>#</code> sind nur Verlinkung und Auffindbarkeit &ndash; sie kopieren nichts auf den geteilten Account. Damit ein Bild auf der Website landet, poste es (auch) aus dem geteilten Account. Doppeltes Posten ist völlig ok, du musst nichts &bdquo;verknüpfen&ldquo;.</p>
+
+            <p><strong>Hinweis:</strong> Der Account ist aktuell auf <strong>privat</strong> gestellt. Besucher der Website sehen die Beiträge über den Link dann nur, wenn sie dem Account folgen und bestätigt sind. Soll alles öffentlich über die Website sichtbar sein, muss der Account in den Instagram-Einstellungen auf <em>öffentlich</em> umgestellt werden.</p>
         </section>
 
         <?php

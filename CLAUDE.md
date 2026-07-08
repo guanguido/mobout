@@ -97,12 +97,20 @@ Single-Page). Verlinkt aus der Hauptnavigation in `index.html` (Link `.nav-membe
 - **Seite:** `mitglieder/index.php` ist eigenständig (eigenes CSS, Logo als Base64), da `assets/`
   nicht auf den Server deployt wird.
 - **Grenzen:** nativer Browser-Login (nicht gestaltbar), Logout browserabhängig; nur über HTTPS sicher.
-- **Inhalt:** `mitglieder/index.php` zeigt Info-Karten für die Crew. Neben Platzhalter-Karten
-  (interne Infos, Bilder posten, Downloads) gibt es die Karte "Navionics Account" mit den
-  Zugangsdaten für den gemeinsamen Navionics-Account (Boating HD App, Tiefenkarten). Die Karte
-  selbst in `mitglieder/index.php` ist die Quelle der Wahrheit für diese Zugangsdaten (nicht
-  hier duplizieren). Abo läuft aktuell bis 14.05.2027 – bei Verlängerung/Änderung die Karte
-  entsprechend aktualisieren.
+- **Inhalt:** `mitglieder/index.php` zeigt Info-Karten für die Crew: "Expeditionen" (Verwaltung,
+  siehe eigener Abschnitt), "Instagram", "Navionics Account" und "Nachricht des Tages".
+  - Karte "Navionics Account": Zugangsdaten für den gemeinsamen Navionics-Account (Boating HD App,
+    Tiefenkarten). Die Karte selbst in `mitglieder/index.php` ist die Quelle der Wahrheit für diese
+    Zugangsdaten (nicht hier duplizieren). Abo läuft aktuell bis 14.05.2027 – bei
+    Verlängerung/Änderung die Karte entsprechend aktualisieren.
+  - Karte "Instagram" (Section `#instagram-bereich`): Zugangsdaten des geteilten `@mobout.de`-
+    Instagram-Accounts plus Kurzanleitung zum Posten. Die Karte ist die Quelle der Wahrheit für
+    diese Zugangsdaten (Benutzername, Passwort, hinterlegte E-Mail/Mobilnummer, Privatsphäre-Status)
+    – nicht hier duplizieren; bei Änderungen die Karte aktualisieren. Erklärt bewusst, dass Bilder
+    nur über den geteilten Account (nicht via `@`/`#` aus eigenen Accounts) auf der Website landen.
+    Reiner statischer Karteninhalt – kein Schreib-Endpunkt. Der öffentliche Website-Link führt zu
+    `instagram.com/mobout.de`; ist der Account privat, sind Beiträge für Nicht-Follower nicht
+    sichtbar.
 
 ## Nachricht des Tages (MOTD)
 
