@@ -31,7 +31,7 @@ jobs:
       - name: Inject member-area auth path
         run: |
           DEPLOY_PATH="${{ steps.target.outputs.path }}"
-          sed -i "s#__HTPASSWD_PATH__#${DEPLOY_PATH}mitglieder/.htpasswd#g" mitglieder/.htaccess
+          sed -i "s#__HTPASSWD_PATH__#${DEPLOY_PATH}mitglieder/data/.htpasswd#g" mitglieder/.htaccess
 
       - name: Deploy to Strato
         run: |
@@ -45,5 +45,14 @@ jobs:
             contact.php \
             expeditions.php \
             expedition-image.php \
+            members.php \
+            member-image.php \
+            admin \
             mitglieder \
             ${{ secrets.STRATO_USER }}@${{ secrets.STRATO_HOST }}:${{ steps.target.outputs.path }}
+
+          # Mitglied-Login deploy-sicher machen: aktive .htpasswd liegt in data/
+          # (git-ignoriert, überlebt rsync --delete). Einmalig aus dem git-getrackten
+          # Seed mitglieder/.htpasswd kopieren, falls noch keiner existiert.
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.STRATO_USER }}@${{ secrets.STRATO_HOST }} \
+            "cd '${{ steps.target.outputs.path }}mitglieder' && mkdir -p data && { test -f data/.htpasswd || cp .htpasswd data/.htpasswd; }"
