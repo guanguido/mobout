@@ -23,9 +23,10 @@ mobout/
 │   ├── account-lib.php # Lesen/Schreiben des geteilten Mitglied-Logins (data/.htpasswd)
 │   ├── members-save.php # CRUD-Schreib-Endpunkt für Mitglieder (action=create/update/delete/delete-image)
 │   ├── account-save.php # Setzt Benutzername + Passwort des Mitglied-Logins (schreibt data/.htpasswd)
-│   ├── data-transfer-lib.php    # Modul-Registry für Export/Import der dynamischen data/-Inhalte (MOTD, Mitglieder, Expeditionen)
+│   ├── data-transfer-lib.php    # Modul-Registry für Export/Import der dynamischen data/-Inhalte (MOTD, Mitglieder, Expeditionen), Backup-Rotation
 │   ├── data-transfer-export.php # Baut ein ZIP-Bundle aller Module und liefert es als Download
-│   └── data-transfer-import.php # Nimmt ein ZIP-Bundle entgegen, ersetzt ausgewählte Module vollständig (mit Backup)
+│   ├── data-transfer-import.php # Nimmt ein ZIP-Bundle entgegen, ersetzt ausgewählte Module vollständig (mit Backup)
+│   └── data-transfer-backup-delete.php # Löscht eine einzelne Sicherung aus mitglieder/data/backups/
 ├── mitglieder/         # Passwortgeschützter Mitgliederbereich (Basic Auth)
 │   ├── index.php       # Eigenständige Seite (eigenes CSS, Logo als Base64); rendert MOTD- und Expeditionen-Formulare serverseitig
 │   ├── motd-save.php   # Schreib-Endpunkt für die MOTD, geschützt durch .htaccess der Umgebung
@@ -293,15 +294,22 @@ anschließend wieder hochladen).
   `mitglieder/data/backups/<Zeitstempel>/<modul>/` geschrieben (git-ignoriert, wie `data/` insgesamt,
   vom Deploy-`--exclude=data/` mitgeschützt). Module sind unabhängig voneinander: schlägt die
   Validierung eines Moduls fehl, bleiben die anderen ausgewählten Module unberührt.
-- **UI:** Panel „Datenübertragung" in `admin/index.php` (`#data-bereich`) mit Download-Button und
+- **Backup-Rotation & Anzeige:** Damit `mitglieder/data/backups/` nicht unbegrenzt wächst, behält
+  `data_transfer_prune_backups()` je Datentyp automatisch nur die letzten `DATA_TRANSFER_BACKUP_KEEP`
+  (5) Sicherungen – ältere werden nach jedem Import gelöscht, kein Cron nötig. Damit die Sicherungen
+  nicht unsichtbar auf dem Server liegen, listet das Admin-Panel „Datenübertragung" sie zusätzlich auf
+  (Zeitstempel, enthaltene Module, Größe) mit einem Lösch-Button pro Eintrag
+  (`admin/data-transfer-backup-delete.php`), falls früher aufgeräumt werden soll.
+- **UI:** Panel „Datenübertragung" in `admin/index.php` (`#data-bereich`) mit Download-Button,
   Upload-Formular (Datei + Checkboxen je Modul, Standard: alle angehakt, JS-Bestätigung vor dem Absenden
-  wegen der ersetzenden Wirkung).
+  wegen der ersetzenden Wirkung) und der Sicherungsliste inkl. Lösch-Buttons.
 - **Voraussetzung:** PHP-Erweiterung `ZipArchive` auf dem Strato-Webspace (Standard bei PHP 8.3).
-- **Bekannte Lücke:** Die Backups unter `mitglieder/data/backups/` können aktuell nur manuell (per
-  SSH/FTP-Zugriff auf den Server) zurückgespielt werden – es gibt noch keine automatisierte
-  Wiederherstellung ("Restore") aus dem Admin-UI. Falls das künftig gebraucht wird: dritter Endpunkt
-  `admin/data-transfer-restore.php`, der eine Liste vorhandener Backup-Zeitstempel anzeigt und einen
-  gewählten Snapshot wie einen Import zurückschreibt (gleiche Backup-vorher-Logik wie beim Import).
+- **Bekannte Lücke:** Es gibt noch keine automatisierte Wiederherstellung ("Restore") einer Sicherung
+  aus dem Admin-UI – nur Anzeige und Löschen. Ein Zurückspielen ist aktuell nur manuell per SSH/FTP
+  möglich (Datei aus `mitglieder/data/backups/<Zeitstempel>/<modul>/` an die Zielstelle kopieren). Falls
+  das künftig gebraucht wird: eigener „Wiederherstellen"-Button neben „Löschen", der intern wie ein
+  Import funktioniert (gleiche Backup-vorher-Logik, damit auch ein Restore rückgängig gemacht werden
+  kann).
 
 ---
 

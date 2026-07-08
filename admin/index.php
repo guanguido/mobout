@@ -45,10 +45,12 @@ $msgMap = [
     'export-error' => 'Export fehlgeschlagen.',
     'import-ok' => 'Import abgeschlossen.',
     'import-error' => 'Import fehlgeschlagen.',
+    'backup-deleted' => 'Sicherung gelöscht.',
+    'backup-delete-error' => 'Sicherung konnte nicht gelöscht werden.',
 ];
 if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
     $flash = $msgMap[$_GET['msg']];
-    $flashType = in_array($_GET['msg'], ['error', 'account-error', 'export-error', 'import-error'], true) ? 'err' : 'ok';
+    $flashType = in_array($_GET['msg'], ['error', 'account-error', 'export-error', 'import-error', 'backup-delete-error'], true) ? 'err' : 'ok';
     if (in_array($_GET['msg'], ['import-ok', 'import-error'], true) && isset($_GET['info'])) {
         $flash .= ' ' . (string) $_GET['info'];
     }
@@ -315,6 +317,27 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                 <?php endforeach; ?>
                 <button type="submit" class="danger">Ausgewählte Daten importieren</button>
             </form>
+
+            <?php $backups = data_transfer_list_backups(); $moduleLabels = array_map(fn($m) => $m['label'], data_transfer_modules()); ?>
+            <h3 style="color:var(--secondary-color);font-size:1.05rem;margin:1.5rem 0 0.5rem;border-bottom:2px solid var(--border-color);padding-bottom:0.25rem;">Sicherungen auf diesem Server</h3>
+            <p class="hint">Wird automatisch bei jedem Import angelegt (Vorzustand vor dem Überschreiben), je Datentyp werden die letzten <?= DATA_TRANSFER_BACKUP_KEEP ?> behalten.</p>
+            <?php if (empty($backups)): ?>
+                <p class="hint" style="margin-top:0;">Noch keine Sicherungen vorhanden.</p>
+            <?php else: ?>
+                <?php foreach ($backups as $b): ?>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:0.6rem 0; border-bottom:1px solid var(--border-color);">
+                        <div>
+                            <strong><?= h($b['timestamp']) ?></strong>
+                            <span class="hint" style="margin:0;"> &middot; <?= h(implode(', ', array_map(fn($m) => $moduleLabels[$m] ?? $m, $b['modules']))) ?> &middot; <?= h(data_transfer_format_bytes($b['sizeBytes'])) ?></span>
+                        </div>
+                        <form method="post" action="data-transfer-backup-delete.php" onsubmit="return confirm('Sicherung <?= h($b['timestamp']) ?> wirklich löschen?');" style="margin:0;">
+                            <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
+                            <input type="hidden" name="timestamp" value="<?= h($b['timestamp']) ?>">
+                            <button type="submit" class="danger" style="margin-top:0;">Löschen</button>
+                        </form>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </section>
 
         <a class="back-link" href="/">&larr; Zur öffentlichen Website</a>
