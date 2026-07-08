@@ -22,7 +22,10 @@ mobout/
 │   ├── auth.php        # Session-Auth, hardcodierter Admin (User "Admin" + bcrypt-Hash), CSRF-Helfer
 │   ├── account-lib.php # Lesen/Schreiben des geteilten Mitglied-Logins (data/.htpasswd)
 │   ├── members-save.php # CRUD-Schreib-Endpunkt für Mitglieder (action=create/update/delete/delete-image)
-│   └── account-save.php # Setzt Benutzername + Passwort des Mitglied-Logins (schreibt data/.htpasswd)
+│   ├── account-save.php # Setzt Benutzername + Passwort des Mitglied-Logins (schreibt data/.htpasswd)
+│   ├── data-transfer-lib.php    # Modul-Registry für Export/Import der dynamischen data/-Inhalte (MOTD, Mitglieder, Expeditionen)
+│   ├── data-transfer-export.php # Baut ein ZIP-Bundle aller Module und liefert es als Download
+│   └── data-transfer-import.php # Nimmt ein ZIP-Bundle entgegen, ersetzt ausgewählte Module vollständig (mit Backup)
 ├── mitglieder/         # Passwortgeschützter Mitgliederbereich (Basic Auth)
 │   ├── index.php       # Eigenständige Seite (eigenes CSS, Logo als Base64); rendert MOTD- und Expeditionen-Formulare serverseitig
 │   ├── motd-save.php   # Schreib-Endpunkt für die MOTD, geschützt durch .htaccess der Umgebung
@@ -32,7 +35,7 @@ mobout/
 │   ├── members-lib.php       # Gemeinsame load/save-Funktionen für Mitglieder inkl. Seeding-Logik
 │   ├── members-seed.json     # Git-getrackter Ausgangsbestand der 17 migrierten Mitglieder
 │   ├── members-seed-images/  # Git-getrackte Startfotos der Mitglieder (Fallback von member-image.php)
-│   ├── data/           # Nur serverseitig, git-ignoriert (motd.txt, expeditions.json, expeditions-images/, members.json, members-images/, .htpasswd) – überlebt Deploys
+│   ├── data/           # Nur serverseitig, git-ignoriert (motd.txt, expeditions.json, expeditions-images/, members.json, members-images/, .htpasswd, backups/) – überlebt Deploys
 │   ├── .htaccess       # Basic-Auth-Konfiguration (Auth-Pfad wird beim Deploy injiziert → data/.htpasswd)
 │   └── .htpasswd       # Git-getrackter Default/Seed des Mitglied-Logins (aktive Datei liegt in data/.htpasswd)
 ├── assets/
@@ -256,6 +259,44 @@ Mitglieder), solange `data/members.json` fehlt. Startfotos liegen git-getrackt i
 - `index.html` lädt per `fetch('/members.php')`, gruppiert nach Rolle und baut die `.team-member`-Karten
   per DOM auf (`textContent`, nie `innerHTML`); Foto via `member-image.php`, sonst Gradient-Avatar mit
   `icon`-Text.
+
+## Datenübertragung (Admin)
+
+Alle drei dynamischen, git-ignorierten Datenbestände (MOTD, Mitglieder, Expeditionen – jeweils
+`mitglieder/data/...`, siehe oben) existieren pro Umgebung (production/staging) getrennt und entstehen
+ausschließlich durch Nutzereingaben in der App, nicht durch Deploys. Damit sie sich trotzdem sichern,
+zwischen Umgebungen übertragen und für lokale Migrationen/Transformationen bearbeiten lassen, gibt es im
+Admin-Bereich ein Export/Import als ein ZIP-Bundle. **Drei Zwecke in einem Mechanismus:** Backup
+(Download als Sicherung), Übertragung zwischen Umgebungen (z. B. Staging → Production) und
+Migration/Transformation (ZIP herunterladen, enthaltene JSON-Dateien lokal bei Bedarf anpassen,
+anschließend wieder hochladen).
+
+- **Architektur:** `admin/data-transfer-lib.php` definiert eine zentrale Modul-Registry
+  (`data_transfer_modules()`) mit den Modulen `motd`, `members`, `expeditions`. Jedes Modul hat eine
+  `export`- und eine `import`-Funktion; Export-/Import-Endpunkt sowie die Admin-UI iterieren generisch
+  über die Registry. **Erweiterbar:** ein künftiger weiterer dynamischer Datentyp nach demselben
+  `data/`-Prinzip wird durch zwei neue Funktionen plus einen weiteren Registry-Eintrag ergänzt – die
+  Endpunkte und die UI müssen dafür nicht angefasst werden. Bestehende `load_*()`/`save_*()`-Funktionen
+  aus `mitglieder/members-lib.php`/`mitglieder/expeditions-lib.php` werden wiederverwendet; für MOTD
+  (bisher ohne eigene Lib-Datei) gibt es kleine `read_motd()`/`write_motd()`-Helfer in derselben Datei.
+- **Bundle-Format:** ein ZIP-Archiv (`ZipArchive`) mit `manifest.json` (Version, Zeitstempel, Host,
+  enthaltene Module) sowie je Modul der JSON-Datei und den referenzierten Bildern
+  (`members/members.json` + `members/images/...`, `expeditions/expeditions.json` +
+  `expeditions/images/...`, `motd/motd.txt`).
+- **Export:** `admin/data-transfer-export.php` (Session- + CSRF-geschützt) baut das ZIP aus allen
+  Modulen und liefert es als Download (`mobout-data-<host>-<Zeitstempel>.zip`).
+- **Import:** `admin/data-transfer-import.php` (Session- + CSRF-geschützt) validiert das hochgeladene
+  ZIP (Manifest-Version, Zip-Slip-Schutz für alle Eintragspfade, Bild-Validierung wie bei normalen
+  Uploads: Whitelist jpg/jpeg/png/webp, `getimagesize()`, 5 MB/Bild, 50 MB/ZIP). Der Admin wählt per
+  Checkbox, welche Module importiert werden sollen; **jedes ausgewählte Modul wird vollständig ersetzt**
+  (keine Zusammenführung) – vor dem Überschreiben wird automatisch ein Backup des Vorzustands nach
+  `mitglieder/data/backups/<Zeitstempel>/<modul>/` geschrieben (git-ignoriert, wie `data/` insgesamt,
+  vom Deploy-`--exclude=data/` mitgeschützt). Module sind unabhängig voneinander: schlägt die
+  Validierung eines Moduls fehl, bleiben die anderen ausgewählten Module unberührt.
+- **UI:** Panel „Datenübertragung" in `admin/index.php` (`#data-bereich`) mit Download-Button und
+  Upload-Formular (Datei + Checkboxen je Modul, Standard: alle angehakt, JS-Bestätigung vor dem Absenden
+  wegen der ersetzenden Wirkung).
+- **Voraussetzung:** PHP-Erweiterung `ZipArchive` auf dem Strato-Webspace (Standard bei PHP 8.3).
 
 ---
 

@@ -2,6 +2,7 @@
 require __DIR__ . '/auth.php';
 require __DIR__ . '/../mitglieder/members-lib.php';
 require __DIR__ . '/account-lib.php';
+require __DIR__ . '/data-transfer-lib.php';
 
 // Logout
 if (($_GET['logout'] ?? '') === '1') {
@@ -41,10 +42,16 @@ $msgMap = [
     'account-saved' => 'Mitglied-Login aktualisiert.',
     'error' => 'Aktion fehlgeschlagen – bitte Eingaben prüfen.',
     'account-error' => 'Login nicht gespeichert: Benutzername (kein „:") und Passwort (min. 6 Zeichen) prüfen.',
+    'export-error' => 'Export fehlgeschlagen.',
+    'import-ok' => 'Import abgeschlossen.',
+    'import-error' => 'Import fehlgeschlagen.',
 ];
 if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
     $flash = $msgMap[$_GET['msg']];
-    $flashType = in_array($_GET['msg'], ['error', 'account-error'], true) ? 'err' : 'ok';
+    $flashType = in_array($_GET['msg'], ['error', 'account-error', 'export-error', 'import-error'], true) ? 'err' : 'ok';
+    if (in_array($_GET['msg'], ['import-ok', 'import-error'], true) && isset($_GET['info'])) {
+        $flash .= ' ' . (string) $_GET['info'];
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -286,6 +293,27 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                 <label>Neuer Benutzername<input type="text" name="username" value="<?= h($accountUser) ?>" required></label>
                 <label>Neues Passwort (min. 6 Zeichen)<input type="password" name="password" autocomplete="new-password" required></label>
                 <button type="submit">Mitglied-Login speichern</button>
+            </form>
+        </section>
+
+        <!-- Datenübertragung: Export/Import der dynamischen Daten als ZIP-Bundle -->
+        <section class="panel" id="data-bereich">
+            <h2>Datenübertragung</h2>
+            <p class="hint">Sichert Nachricht des Tages, Mitglieder und Expeditionen (inkl. Fotos) als eine ZIP-Datei. Dient als Backup, zur Übertragung zwischen Staging und Production sowie für lokale Migrationen: Datei herunterladen, bei Bedarf die enthaltenen JSON-Dateien anpassen, anschließend in der Zielumgebung wieder hochladen.</p>
+
+            <form method="post" action="data-transfer-export.php" style="margin-bottom:1.5rem;">
+                <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
+                <button type="submit">Alle Daten exportieren (.zip)</button>
+            </form>
+
+            <form method="post" action="data-transfer-import.php" enctype="multipart/form-data" onsubmit="return confirm('Import ersetzt die ausgewählten Daten dieser Umgebung vollständig (ein Backup wird automatisch angelegt). Fortfahren?');">
+                <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
+                <label>ZIP-Datei aus einem früheren Export<input type="file" name="bundle" accept=".zip,application/zip" required></label>
+                <label style="margin-top:0.9rem;">Zu importierende Daten:</label>
+                <?php foreach (data_transfer_modules() as $moduleId => $module): ?>
+                    <label style="font-weight:400;"><input type="checkbox" name="modules[]" value="<?= h($moduleId) ?>" checked style="width:auto;display:inline-block;"> <?= h($module['label']) ?></label>
+                <?php endforeach; ?>
+                <button type="submit" class="danger">Ausgewählte Daten importieren</button>
             </form>
         </section>
 
