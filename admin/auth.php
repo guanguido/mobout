@@ -16,6 +16,15 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Harden session cookies: HTTPS-only, no JavaScript access, CSRF protection
+if (session_status() === PHP_SESSION_ACTIVE) {
+    session_set_cookie_params([
+        'secure' => true,      // HTTPS only (blocks transmission over unencrypted HTTP)
+        'httponly' => true,    // No JavaScript access (prevents XSS-based session theft)
+        'samesite' => 'Lax'    // CSRF protection (blocks cross-site request forgery)
+    ]);
+}
+
 function admin_is_logged_in(): bool
 {
     return !empty($_SESSION['admin_authenticated']);

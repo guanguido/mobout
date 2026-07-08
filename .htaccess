@@ -1,0 +1,5 @@
+# HSTS Header (enforce HTTPS for future requests, preload to browser database)
+# Note: HTTP→HTTPS redirect is handled by Strato's "301-Weiterleitung" setting
+<IfModule mod_headers.c>
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+</IfModule>

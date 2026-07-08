@@ -289,24 +289,20 @@ Mitglieder), solange `data/members.json` fehlt. Startfotos liegen git-getrackt i
 
 # Offene Punkte / Bekannte Einschränkungen
 
-## HTTPS/SSL fehlt auf mobout.de (Sicherheitsrisiko) — wird im nächsten Feature gelöst
+## HTTPS/SSL auf mobout.de — ✅ Gelöst (2026-07-08)
 
-Auf `mobout.de` (und `staging.mobout.de`) ist **kein SSL aktiv** (der Server bricht den TLS-Handshake
-ab). Konsequenz: Beide Passwörter gehen **im Klartext** übers Netz:
-- **Mitglied-Login** (Basic Auth `mitglieder/`): nur Base64-kodiert → mitlesbar.
-- **Admin-Login** (`admin/`): POST-Body `password=…` unverschlüsselt.
-Der Admin ist der kritischere Fall (verwaltet alle Mitglieder + setzt den Mitglied-Login).
+**Status:** HTTPS ist jetzt **aktiv und erzwungen** auf mobout.de und staging.mobout.de.
 
-**Lösungsweg (Infrastruktur, nicht Code):**
-- Selbst-signiertes/eigenes Zertifikat ist **kein** gangbarer Weg: auf Strato-Shared-Hosting nicht
-  installierbar, außerdem Browser-Warnseiten + keine Echtheitsgarantie.
-- Bevorzugt: im Strato-Panel prüfen, ob **kostenloses SSL (Let's Encrypt) pro Domain** verfügbar ist
-  (viele aktuelle Pakete bieten das für alle Domains, nicht nur eine — das eine bezahlte/genutzte Cert
-  liegt derzeit auf `doitexcellent.de`). Alternativ **Cloudflare Free** als vertrauenswürdiges
-  Edge-Zertifikat davorschalten.
+**Was gemacht wurde:**
+- **SSL-Zertifikat:** STRATO SSL Starter (DV) für mobout.de aktiviert (kostenlos für erste 6 Monate: 0,50 €/Monat, danach 3,50 €/Monat)
+- **HTTP→HTTPS-Redirect:** Automatisch aktiviert durch Strato ("301-Weiterleitung" im SSL-Panel)
+- **HSTS-Header:** Root `.htaccess` mit HTTP Strict-Transport-Security (max-age=31536000; includeSubDomains; preload)
+- **Session-Cookie-Sicherheit:** `admin/auth.php` mit expliziten Flags (Secure, HttpOnly, SameSite=Lax)
 
-**Repo-seitige TODOs, sobald ein Zertifikat live ist:**
-- HTTP→HTTPS-Redirect + HSTS (z. B. in einer Root-`.htaccess`) — erst **nach** aktivem Cert, sonst legt
-  der Redirect die Seite lahm.
-- Session-Cookie in `admin/auth.php` härten: `HttpOnly` + `SameSite=Lax` (jederzeit gefahrlos),
-  `Secure` sobald HTTPS anliegt.
+**Sicherheitsauswirkung:**
+- ✅ Admin-Passwort wird verschlüsselt übertragen (TLS in Strato 301-Redirect + Browser HTTPS)
+- ✅ Mitglied-Login (Basic Auth) wird verschlüsselt übertragen
+- ✅ Session-Cookies können nicht von JavaScript gelesen werden (XSS-Schutz)
+- ✅ Cross-Site-Request-Forgery (CSRF) durch SameSite=Lax Cookies gemindert
+- ✅ Browser merkt sich HTTPS für zukünftige Besuche (HSTS); Preload-Liste schützt auch erste Besuche
+- ✅ Alte HTTP-Links werden automatisch zu HTTPS umgeleitet (nutzerfreundlich)
