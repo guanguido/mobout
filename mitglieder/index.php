@@ -130,17 +130,9 @@
     <main>
         <div class="cards">
             <div class="card">
-                <h2>Interne Infos</h2>
-                <p>Termine, Absprachen und alles rund um die nächste Expedition &ndash; hier an einem Ort. Inhalte folgen in Kürze.</p>
-            </div>
-            <div class="card">
                 <h2>Expeditionen</h2>
                 <p>Neue Ausflüge anlegen, bestehende bearbeiten oder Fotos aus Instagram hochladen &ndash; erscheint automatisch auf der öffentlichen Website.</p>
                 <p><a href="#expeditionen-bereich">Expeditionen verwalten &rarr;</a></p>
-            </div>
-            <div class="card">
-                <h2>Downloads</h2>
-                <p>Packlisten, Vorlagen und Dokumente zum Herunterladen &ndash; in Vorbereitung.</p>
             </div>
             <div class="card">
                 <h2>Navionics Account</h2>
