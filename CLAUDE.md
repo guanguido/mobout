@@ -284,3 +284,29 @@ Mitglieder), solange `data/members.json` fehlt. Startfotos liegen git-getrackt i
 
 - `doitexcellent.de` niemals anfassen
 - Schreibweise durchgängig englisch: `production` / `staging`
+
+---
+
+# Offene Punkte / Bekannte Einschränkungen
+
+## HTTPS/SSL fehlt auf mobout.de (Sicherheitsrisiko) — wird im nächsten Feature gelöst
+
+Auf `mobout.de` (und `staging.mobout.de`) ist **kein SSL aktiv** (der Server bricht den TLS-Handshake
+ab). Konsequenz: Beide Passwörter gehen **im Klartext** übers Netz:
+- **Mitglied-Login** (Basic Auth `mitglieder/`): nur Base64-kodiert → mitlesbar.
+- **Admin-Login** (`admin/`): POST-Body `password=…` unverschlüsselt.
+Der Admin ist der kritischere Fall (verwaltet alle Mitglieder + setzt den Mitglied-Login).
+
+**Lösungsweg (Infrastruktur, nicht Code):**
+- Selbst-signiertes/eigenes Zertifikat ist **kein** gangbarer Weg: auf Strato-Shared-Hosting nicht
+  installierbar, außerdem Browser-Warnseiten + keine Echtheitsgarantie.
+- Bevorzugt: im Strato-Panel prüfen, ob **kostenloses SSL (Let's Encrypt) pro Domain** verfügbar ist
+  (viele aktuelle Pakete bieten das für alle Domains, nicht nur eine — das eine bezahlte/genutzte Cert
+  liegt derzeit auf `doitexcellent.de`). Alternativ **Cloudflare Free** als vertrauenswürdiges
+  Edge-Zertifikat davorschalten.
+
+**Repo-seitige TODOs, sobald ein Zertifikat live ist:**
+- HTTP→HTTPS-Redirect + HSTS (z. B. in einer Root-`.htaccess`) — erst **nach** aktivem Cert, sonst legt
+  der Redirect die Seite lahm.
+- Session-Cookie in `admin/auth.php` härten: `HttpOnly` + `SameSite=Lax` (jederzeit gefahrlos),
+  `Secure` sobald HTTPS anliegt.
