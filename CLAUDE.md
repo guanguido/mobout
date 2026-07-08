@@ -297,6 +297,11 @@ anschließend wieder hochladen).
   Upload-Formular (Datei + Checkboxen je Modul, Standard: alle angehakt, JS-Bestätigung vor dem Absenden
   wegen der ersetzenden Wirkung).
 - **Voraussetzung:** PHP-Erweiterung `ZipArchive` auf dem Strato-Webspace (Standard bei PHP 8.3).
+- **Bekannte Lücke:** Die Backups unter `mitglieder/data/backups/` können aktuell nur manuell (per
+  SSH/FTP-Zugriff auf den Server) zurückgespielt werden – es gibt noch keine automatisierte
+  Wiederherstellung ("Restore") aus dem Admin-UI. Falls das künftig gebraucht wird: dritter Endpunkt
+  `admin/data-transfer-restore.php`, der eine Liste vorhandener Backup-Zeitstempel anzeigt und einen
+  gewählten Snapshot wie einen Import zurückschreibt (gleiche Backup-vorher-Logik wie beim Import).
 
 ---
 
