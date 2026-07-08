@@ -272,6 +272,14 @@ Admin-Bereich ein Export/Import als ein ZIP-Bundle. **Drei Zwecke in einem Mecha
 Migration/Transformation (ZIP herunterladen, enthaltene JSON-Dateien lokal bei Bedarf anpassen,
 anschließend wieder hochladen).
 
+**Redaktions-Workflow Staging → Production:** Der Mechanismus ermöglicht, Inhaltsänderungen (neue
+Mitglieder, neue Expedition, MOTD) zuerst auf Staging einzupflegen, dort in Ruhe auf der Website
+anzusehen und zu prüfen, und die geprüften Daten dann gebündelt per Export/Import nach Production zu
+übernehmen – analog zum bestehenden Code-Deployment (`develop` → `master`, siehe
+„Deployment-Kontext" unten), nur für die dynamischen Inhalte statt für Code. Ohne diesen Mechanismus
+müssten Inhalte doppelt von Hand in beiden Umgebungen gepflegt werden, mit dem Risiko voneinander
+abweichender Stände.
+
 - **Architektur:** `admin/data-transfer-lib.php` definiert eine zentrale Modul-Registry
   (`data_transfer_modules()`) mit den Modulen `motd`, `members`, `expeditions`. Jedes Modul hat eine
   `export`- und eine `import`-Funktion; Export-/Import-Endpunkt sowie die Admin-UI iterieren generisch
