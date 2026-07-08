@@ -105,6 +105,16 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
         .flash { padding: 0.85rem 1.1rem; border-radius: 8px; margin-bottom: 1.5rem; font-weight: 500; }
         .flash.ok { background: #e6f4ea; color: #1e7a3d; border: 1px solid #b6e0c4; }
         .flash.err { background: #fdecea; color: #b3261e; border: 1px solid #f5c6c2; }
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .card {
+            background: var(--light-bg); border: 1px solid var(--border-color);
+            border-radius: 10px; padding: 1.75rem;
+        }
+        .card h2 { color: var(--primary-color); font-size: 1.25rem; margin-bottom: 0.75rem; }
+        .card p { color: #555; }
+        .card p + p { margin-top: 0.75rem; }
+        .card p a { color: var(--secondary-color); font-weight: 500; text-decoration: none; }
+        .card p a:hover { text-decoration: underline; }
         .panel {
             background: var(--light-bg); border: 1px solid var(--border-color);
             border-radius: 10px; padding: 1.75rem; margin-bottom: 2rem;
@@ -204,6 +214,24 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
         <?php if ($flash !== ''): ?>
             <div class="flash <?= h($flashType) ?>"><?= h($flash) ?></div>
         <?php endif; ?>
+
+        <div class="cards">
+            <div class="card">
+                <h2>Mitglieder</h2>
+                <p>Personen anlegen, bearbeiten oder löschen, die auf der öffentlichen Website angezeigt werden &ndash; nach Team, Supporter und Anwärter gruppiert.</p>
+                <p><a href="#mitglieder-bereich">Mitglieder verwalten &rarr;</a></p>
+            </div>
+            <div class="card">
+                <h2>Mitglied-Login</h2>
+                <p>Der EINE geteilte Zugang für den Mitgliederbereich (<code>mobout.de/mitglieder/</code>) &ndash; Benutzername und Passwort setzen.</p>
+                <p><a href="#account-bereich">Login verwalten &rarr;</a></p>
+            </div>
+            <div class="card">
+                <h2>Datenübertragung</h2>
+                <p>Nachricht des Tages, Mitglieder und Expeditionen als ZIP-Bundle exportieren oder importieren &ndash; für Backup, Staging-Production-Übertragung und Migrationen.</p>
+                <p><a href="#data-bereich">Daten übertragen &rarr;</a></p>
+            </div>
+        </div>
 
         <!-- Mitglieder-Verwaltung -->
         <section class="panel" id="mitglieder-bereich">
