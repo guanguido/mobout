@@ -29,7 +29,7 @@ mobout/
 │   ├── member-image.php # Admin-geschützte Foto-Vorschau (ohne Consent-Filter, im Unterschied zum öffentlichen member-image.php)
 │   └── help.php        # Admin-only Hilfeseite: Prozess Benutzeranlage, Bestands-Zustimmung, Templates, Anzeige-Regel, Audit, Datensicherung
 ├── mitglieder/         # Mitgliederbereich (PHP-Session-Login, individuelle E-Mail-Accounts)
-│   ├── index.php       # Eigenständige Seite (eigenes CSS, Logo als Base64); Login-Gate + Crew-Karten + persönliche Konto-Sektion (Passwort, Zustimmung)
+│   ├── index.php       # Eigenständige Seite (eigenes CSS, Logo als Base64); Login-Gate + Crew-Karten + persönliche Konto-Sektion (eigenes Profil, Passwort, Zustimmung), Begrüßung mit Mitgliedsnamen
 │   ├── member-auth.php # Session-Auth (E-Mail-Login), CSRF-Helfer, erzwungener Passwortwechsel, data/-Härtung
 │   ├── accounts-lib.php # Lesen/Schreiben individueller Accounts (data/accounts.json), OTP-Ausgabe, Mail-Helfer
 │   ├── email-templates-lib.php # Editierbare E-Mail-Templates (Registry + Rendering mit Platzhaltern)
@@ -37,6 +37,8 @@ mobout/
 │   ├── reset-request.php # Öffentlich: "Passwort vergessen", stellt Einmalpasswort aus und verschickt es
 │   ├── password-change.php # Passwort selbst ändern (verlangt aktuelles Passwort)
 │   ├── consent-save.php # Mitglied stimmt der öffentlichen Anzeige selbst zu (nur nach E-Mail-Verifizierung)
+│   ├── profile-save.php # Mitglied bearbeitet eigenen Kurztext/Icon/Foto (Name/Rolle/E-Mail bleiben admin-only)
+│   ├── profile-image.php # Session-geschützte eigene Foto-Vorschau ohne f-Parameter und ohne Consent-Gate
 │   ├── motd-save.php   # Schreib-Endpunkt für die MOTD, PHP-Session-geschützt
 │   ├── expeditions-save.php  # CRUD-Schreib-Endpunkt für Expeditionen (action=create/update/delete/delete-image), PHP-Session-geschützt
 │   ├── expeditions-lib.php   # Gemeinsame load/save-Funktionen inkl. Seeding-Logik
@@ -129,7 +131,8 @@ der Hauptnavigation in `index.html` (Link `.nav-members`).
   ohne `Secure`-Flag, sonst würde der Browser das Session-Cookie verwerfen und der Login griffe nicht.
 - **Inhalt:** `mitglieder/index.php` zeigt Info-Karten für die Crew: "Expeditionen" (Verwaltung,
   siehe eigener Abschnitt), "Instagram", "Navionics Account", "Nachricht des Tages" und "Konto"
-  (Passwort ändern, Zustimmung zur Anzeige).
+  (eigenes Profil: Kurztext/Icon/Foto, Passwort ändern, Zustimmung zur Anzeige). Die
+  Begrüßungsüberschrift zeigt den Namen des eingeloggten Mitglieds.
   - Karte "Navionics Account": Zugangsdaten für den gemeinsamen Navionics-Account (Boating HD App,
     Tiefenkarten). Die Karte selbst in `mitglieder/index.php` ist die Quelle der Wahrheit für diese
     Zugangsdaten (nicht hier duplizieren). Abo läuft aktuell bis 14.05.2027 – bei
@@ -179,11 +182,24 @@ Mechanismus.
   nur eine Feld-Whitelist (keine internen Zustimmungs-/Account-Metadaten). `member-image.php` prüft
   ebenfalls `consentGiven`, damit ein Foto nicht per direkter URL trotz fehlender Zustimmung abrufbar
   ist.
-- **Datentrennung/Berechtigungen:** Passwort ändern und Zustimmung sind streng auf das eingeloggte
-  Mitglied selbst begrenzt (`memberId` kommt ausschließlich aus der Session, nie aus einem
-  Request-Parameter). Mitglieder-**Profile** (Name, Rolle, Text, Icon, Foto, E-Mail) bearbeitet
-  ausschließlich der Admin – kein Mitglied bearbeitet ein Profil, weder ein fremdes noch das eigene.
-  Gruppeninhalte (Expeditionen, MOTD) bleiben wie bisher für jedes eingeloggte Mitglied bearbeitbar.
+- **Datentrennung/Berechtigungen:** Passwort ändern, Zustimmung und die eigenen Profilfelder (siehe
+  „Eigenes Profil" unten) sind streng auf das eingeloggte Mitglied selbst begrenzt (`memberId` kommt
+  ausschließlich aus der Session, nie aus einem Request-Parameter) – ein Mitglied kann so technisch
+  nie ein fremdes Profil erreichen. **Name, Rolle und E-Mail** bearbeitet weiterhin ausschließlich der
+  Admin (`admin/members-save.php`); **Kurztext, das kleine Icon (Emoji) und Foto** kann seit dem
+  Self-Service-Profil auch das Mitglied selbst ändern (`mitglieder/profile-save.php`). Gruppeninhalte
+  (Expeditionen, MOTD) bleiben wie bisher für jedes eingeloggte Mitglied bearbeitbar.
+- **Eigenes Profil (`#konto-bereich` → „Mein Profil"):** Ein Mitglied sieht dort Name und Rolle
+  (nur Anzeige) sowie Kurztext, kleines Icon und Foto (bearbeitbar) des eigenen Datensatzes.
+  `mitglieder/profile-save.php` validiert Foto-Uploads wie beim Admin-CRUD (Whitelist
+  jpg/jpeg/png/webp, `getimagesize()`, max. 5 MB). Die eigene Foto-Vorschau läuft über einen
+  **dritten** Bild-Endpunkt, `mitglieder/profile-image.php`: Session-geschützt, akzeptiert **keinen**
+  `f`-Parameter (Dateiname kommt ausschließlich aus dem eigenen Datensatz), damit ein Mitglied
+  niemals das Foto einer anderen Person abrufen kann – und liefert das eigene Foto unabhängig von der
+  eigenen `consentGiven`-Zustimmung aus (sonst könnte ein Mitglied ohne Zustimmung sein Foto nicht
+  mal selbst sehen, da das öffentliche `member-image.php` genau das voraussetzt). Die
+  Begrüßung in `mitglieder/index.php` zeigt den Namen des eingeloggten Mitglieds
+  ( „Willkommen NAME im Mitgliederbereich von MobOut").
 - **Hilfe für den Admin:** `admin/help.php` (verlinkt im Admin-Dashboard-Nav) dokumentiert den
   kompletten Benutzeranlage-Prozess sowie Bestands-Zustimmung, Templates, Anzeige-Regel und Audit
   direkt im Tool.

@@ -134,6 +134,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
             display: inline-block; background: var(--secondary-color); color: white; font-size: 0.7rem;
             font-weight: 600; padding: 0.1rem 0.55rem; border-radius: 999px; margin-left: 0.5rem; vertical-align: middle;
         }
+        .field-hint { color: #666; font-size: 0.85rem; margin: 0.2rem 0 1rem; }
         .consent-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
         .consent-table th, .consent-table td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border-color); }
         .consent-table th { color: var(--secondary-color); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
@@ -260,7 +261,8 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                     <input type="hidden" name="action" value="create">
                     <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
                     <label>Anzeigename<input type="text" name="name" required></label>
-                    <label>E-Mail (optional &ndash; legt bei Angabe einen Login-Account an und verschickt die Willkommensmail)<input type="email" name="email" placeholder="name@example.com"></label>
+                    <label>E-Mail<input type="email" name="email" style="width:100%;" placeholder="name@example.com"></label>
+                    <p class="field-hint">Optional &ndash; legt bei Angabe einen Login-Account an und verschickt die Willkommensmail.</p>
                     <label>Rolle
                         <select name="role">
                             <?php foreach (ROLE_LABELS as $key => $label): ?>
@@ -284,14 +286,20 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                         <details class="member-entry">
                             <summary><?= h($m['name']) ?><span class="role-badge"><?= h(ROLE_LABELS[$m['role']] ?? $m['role']) ?></span></summary>
 
+                            <p class="hint" style="margin-top:0;">E-Mail: <strong><?= $mAcc ? h($mAcc['email']) : '&mdash; kein Account'; ?></strong></p>
+                            <?php if ($mAcc): ?>
+                                <p class="hint" style="margin-top:0;">Status der E-Mail-Verifikation: <strong><?= !empty($mAcc['emailVerified']) ? 'verifiziert' : 'nicht verifiziert' ?></strong></p>
+                            <?php endif; ?>
                             <p class="hint" style="margin-top:0;">
-                                E-Mail: <strong><?= $mAcc ? h($mAcc['email']) : '&mdash; kein Account'; ?></strong>
-                                <?php if ($mAcc): ?> &middot; <?= !empty($mAcc['emailVerified']) ? 'verifiziert' : 'nicht verifiziert' ?><?php endif; ?>
-                                &middot; Anzeige:
+                                Status der Zustimmung:
+                                <strong>
                                 <?php if (!empty($m['consentGiven'])): ?>
                                     zugestimmt (<?= h((string) ($m['consentSource'] ?? '')) ?><?php if (!empty($m['consentAt'])): ?>, <?= h((string) $m['consentAt']) ?><?php endif; ?>)
                                 <?php else: ?>
                                     noch keine Zustimmung
+                                <?php endif; ?>
+                                </strong>
+                                <?php if (empty($m['consentGiven'])): ?>
                                     <form method="post" action="members-save.php" style="display:inline;margin:0;" onsubmit="return confirm('Zustimmung stellvertretend für <?= h(addslashes($m['name'])) ?> erteilen?');">
                                         <input type="hidden" name="action" value="grant-consent">
                                         <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
@@ -318,7 +326,8 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                                 <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
                                 <input type="hidden" name="id" value="<?= h($m['id']) ?>">
                                 <label>Anzeigename<input type="text" name="name" value="<?= h($m['name']) ?>" required></label>
-                                <label>E-Mail (optional &ndash; leer lassen, um die bestehende Adresse zu behalten)<input type="email" name="email" value="<?= $mAcc ? h($mAcc['email']) : '' ?>" placeholder="name@example.com"></label>
+                                <label>E-Mail<input type="email" name="email" style="width:100%;" value="<?= $mAcc ? h($mAcc['email']) : '' ?>" placeholder="name@example.com"></label>
+                                <p class="field-hint">Optional &ndash; leer lassen, um die bestehende Adresse zu behalten.</p>
                                 <label>Rolle
                                     <select name="role">
                                         <?php foreach (ROLE_LABELS as $key => $label): ?>

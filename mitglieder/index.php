@@ -135,6 +135,19 @@ if ($memberMustChangePassword):
 <?php
 exit;
 endif;
+
+// Eigener Mitglied-Datensatz (Name/Rolle/Foto/Text/Emoji) fuer die Begruessung
+// und die Profil-Sektion "Konto". Einmal zentral geladen, weiter unten
+// wiederverwendet - keine zweite load_members()-Runde noetig.
+require_once __DIR__ . '/members-lib.php';
+$memberSelf = null;
+foreach (load_members() as $m) {
+    if ((string) ($m['id'] ?? '') === member_current_id()) {
+        $memberSelf = $m;
+        break;
+    }
+}
+$memberRoleLabels = ['team' => 'Team', 'supporter' => 'Supporter / Auch dabei', 'anwaerter' => 'Anwärter'];
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -269,7 +282,7 @@ endif;
     </header>
 
     <section class="hero">
-        <h1>Willkommen im Mitgliederbereich von MobOut</h1>
+        <h1>Willkommen<?= $memberSelf ? ' ' . htmlspecialchars((string) $memberSelf['name']) : '' ?> im Mitgliederbereich von MobOut</h1>
         <p>Schön, dass du da bist! Hier sammeln wir alles, was nur für die Crew bestimmt ist.</p>
     </section>
 
@@ -339,14 +352,11 @@ endif;
         </section>
 
         <?php
-        require_once __DIR__ . '/members-lib.php';
-        $memberSelf = null;
-        foreach (load_members() as $m) {
-            if (($m['id'] ?? '') === member_current_id()) {
-                $memberSelf = $m;
-                break;
-            }
-        }
+        $profilemsg = (string) ($_GET['profilemsg'] ?? '');
+        $profileFeedback = [
+            'saved' => ['ok', 'Profil gespeichert.'],
+            'error' => ['err', 'Profil konnte nicht gespeichert werden.'],
+        ][$profilemsg] ?? null;
         $pwmsg = (string) ($_GET['pwmsg'] ?? '');
         $pwFeedback = [
             'changed' => ['ok', 'Passwort wurde geändert.'],
@@ -368,6 +378,23 @@ endif;
                 <dt>Status</dt><dd><?= !empty($memberAccount['emailVerified']) ? 'E-Mail verifiziert' : 'E-Mail noch nicht verifiziert' ?></dd>
             </dl>
 
+            <h3>Mein Profil</h3>
+            <?php if ($profileFeedback): ?><p class="form-msg form-msg-<?= $profileFeedback[0] ?>"><?= htmlspecialchars($profileFeedback[1]) ?></p><?php endif; ?>
+            <dl class="account-info">
+                <dt>Name</dt><dd><?= htmlspecialchars((string) ($memberSelf['name'] ?? '')) ?></dd>
+                <dt>Rolle</dt><dd><?= htmlspecialchars($memberRoleLabels[$memberSelf['role'] ?? ''] ?? (string) ($memberSelf['role'] ?? '')) ?></dd>
+            </dl>
+            <?php if (!empty($memberSelf['image'])): ?>
+                <p><img src="profile-image.php?v=<?= urlencode((string) ($memberSelf['updatedAt'] ?? '')) ?>" alt="" style="width:96px;height:96px;border-radius:50%;object-fit:cover;display:block;"></p>
+            <?php endif; ?>
+            <form method="post" action="profile-save.php" enctype="multipart/form-data">
+                <input type="hidden" name="csrf" value="<?= htmlspecialchars($memberCsrf) ?>">
+                <label>Kurztext<br><textarea name="text" rows="3" maxlength="600"><?= htmlspecialchars((string) ($memberSelf['text'] ?? '')) ?></textarea></label><br>
+                <label>Kleines Icon nach dem Text (Emoji, optional)<br><input type="text" name="emoji" maxlength="20" value="<?= htmlspecialchars((string) ($memberSelf['emoji'] ?? '')) ?>"></label><br>
+                <label><?= !empty($memberSelf['image']) ? 'Foto ersetzen' : 'Foto hinzufügen' ?> (optional, jpg/png/webp, max. 5 MB)<br><input type="file" name="image" accept="image/jpeg,image/png,image/webp"></label><br>
+                <p><button type="submit">Profil speichern</button></p>
+            </form>
+
             <h3>Passwort ändern</h3>
             <?php if ($pwFeedback): ?><p class="form-msg form-msg-<?= $pwFeedback[0] ?>"><?= htmlspecialchars($pwFeedback[1]) ?></p><?php endif; ?>
             <form method="post" action="password-change.php">
@@ -383,7 +410,7 @@ endif;
             <?php if (!empty($memberSelf['consentGiven'])): ?>
                 <p>Du hast der Anzeige zugestimmt<?php if (!empty($memberSelf['consentAt'])): ?> am <?= htmlspecialchars((string) $memberSelf['consentAt']) ?><?php endif; ?>.</p>
             <?php else: ?>
-                <p>Du wirst aktuell <strong>nicht</strong> auf der öffentlichen Website angezeigt. Erst mit deiner Zustimmung erscheinst du dort.</p>
+                <p class="form-msg form-msg-err">Du wirst aktuell <strong>nicht</strong> auf der öffentlichen Website angezeigt. Erst mit deiner Zustimmung erscheinst du dort.</p>
                 <form method="post" action="consent-save.php">
                     <input type="hidden" name="csrf" value="<?= htmlspecialchars($memberCsrf) ?>">
                     <button type="submit" <?= empty($memberAccount['emailVerified']) ? 'disabled title="E-Mail muss zuerst verifiziert sein"' : '' ?>>Der Anzeige zustimmen</button>
