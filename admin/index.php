@@ -303,7 +303,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
 
                             <?php if (!empty($m['image'])): ?>
                                 <div class="member-photo">
-                                    <img src="/member-image.php?f=<?= urlencode($m['image']) ?>" alt="">
+                                    <img src="member-image.php?f=<?= urlencode($m['image']) ?>" alt="">
                                     <form method="post" action="members-save.php" onsubmit="return confirm('Foto wirklich entfernen?');">
                                         <input type="hidden" name="action" value="delete-image">
                                         <input type="hidden" name="csrf" value="<?= h($csrf) ?>">

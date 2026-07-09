@@ -26,6 +26,7 @@ mobout/
 │   ├── data-transfer-export.php # Baut ein ZIP-Bundle aller Module und liefert es als Download
 │   ├── data-transfer-import.php # Nimmt ein ZIP-Bundle entgegen, ersetzt ausgewählte Module vollständig (mit Backup)
 │   ├── data-transfer-backup-delete.php # Löscht eine einzelne Sicherung aus mitglieder/data/backups/
+│   ├── member-image.php # Admin-geschützte Foto-Vorschau (ohne Consent-Filter, im Unterschied zum öffentlichen member-image.php)
 │   └── help.php        # Admin-only Hilfeseite: Prozess Benutzeranlage, Bestands-Zustimmung, Templates, Anzeige-Regel, Audit, Datensicherung
 ├── mitglieder/         # Mitgliederbereich (PHP-Session-Login, individuelle E-Mail-Accounts)
 │   ├── index.php       # Eigenständige Seite (eigenes CSS, Logo als Base64); Login-Gate + Crew-Karten + persönliche Konto-Sektion (Passwort, Zustimmung)
@@ -351,6 +352,10 @@ Mitglieder), solange `data/members.json` fehlt. Startfotos liegen git-getrackt i
 - `member-image.php` streamt ein Foto mit Pfad-Traversal-Schutz; sucht zuerst in
   `mitglieder/data/members-images/`, dann als Fallback in `mitglieder/members-seed-images/` – liefert
   nur aus, wenn das zugehörige Mitglied `consentGiven === true` hat.
+- **`admin/member-image.php`** ist ein bewusst separater, admin-geschützter Zwilling (gleiche
+  Pfad-Traversal-Logik, aber **ohne** Consent-Prüfung): Der Admin muss beim Verwalten immer alle
+  Fotos sehen, unabhängig von der öffentlichen Zustimmung. `admin/index.php` nutzt für seine
+  Foto-Vorschau in den Mitglieder-Formularen diesen Endpunkt, nicht den öffentlichen.
 - `index.html` lädt per `fetch('/members.php')`, gruppiert nach Rolle und baut die `.team-member`-Karten
   per DOM auf (`textContent`, nie `innerHTML`); Foto via `member-image.php`, sonst Gradient-Avatar mit
   `icon`-Text.
