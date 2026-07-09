@@ -100,6 +100,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
             border-bottom: 2px solid transparent; padding: 0.25rem 0; transition: border-color 0.3s ease;
         }
         header nav a:hover { border-bottom-color: var(--accent-color); }
+        header nav a + a { margin-left: 1.25rem; }
         main { max-width: 1000px; margin: 0 auto; padding: 3rem 2rem; }
         h1.page-title { color: var(--primary-color); font-size: 1.8rem; margin-bottom: 0.5rem; }
         .intro { color: #666; margin-bottom: 2rem; }
@@ -177,6 +178,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
             </div>
             <nav>
                 <?php if (admin_is_logged_in()): ?>
+                    <a href="help.php">Hilfe</a>
                     <a href="index.php?logout=1">Abmelden</a>
                 <?php else: ?>
                     <a href="/">&larr; Zur Hauptseite</a>

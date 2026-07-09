@@ -25,7 +25,8 @@ mobout/
 │   ├── data-transfer-lib.php    # Modul-Registry für Export/Import der dynamischen data/-Inhalte (MOTD, Mitglieder, Expeditionen, Accounts, E-Mail-Templates, Zustimmungs-Audit-Log), Backup-Rotation
 │   ├── data-transfer-export.php # Baut ein ZIP-Bundle aller Module und liefert es als Download
 │   ├── data-transfer-import.php # Nimmt ein ZIP-Bundle entgegen, ersetzt ausgewählte Module vollständig (mit Backup)
-│   └── data-transfer-backup-delete.php # Löscht eine einzelne Sicherung aus mitglieder/data/backups/
+│   ├── data-transfer-backup-delete.php # Löscht eine einzelne Sicherung aus mitglieder/data/backups/
+│   └── help.php        # Admin-only Hilfeseite: Prozess Benutzeranlage, Bestands-Zustimmung, Templates, Anzeige-Regel, Audit, Datensicherung
 ├── mitglieder/         # Mitgliederbereich (PHP-Session-Login, individuelle E-Mail-Accounts)
 │   ├── index.php       # Eigenständige Seite (eigenes CSS, Logo als Base64); Login-Gate + Crew-Karten + persönliche Konto-Sektion (Passwort, Zustimmung)
 │   ├── member-auth.php # Session-Auth (E-Mail-Login), CSRF-Helfer, erzwungener Passwortwechsel, data/-Härtung
@@ -182,6 +183,9 @@ Mechanismus.
   Request-Parameter). Mitglieder-**Profile** (Name, Rolle, Text, Icon, Foto, E-Mail) bearbeitet
   ausschließlich der Admin – kein Mitglied bearbeitet ein Profil, weder ein fremdes noch das eigene.
   Gruppeninhalte (Expeditionen, MOTD) bleiben wie bisher für jedes eingeloggte Mitglied bearbeitbar.
+- **Hilfe für den Admin:** `admin/help.php` (verlinkt im Admin-Dashboard-Nav) dokumentiert den
+  kompletten Benutzeranlage-Prozess sowie Bestands-Zustimmung, Templates, Anzeige-Regel und Audit
+  direkt im Tool.
 
 ## E-Mail-Templates
 
