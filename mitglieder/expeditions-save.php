@@ -11,6 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 require __DIR__ . '/member-auth.php';
 require_member();
 member_check_csrf();
+member_enforce_password_change();
 
 const MAX_IMAGES = 8;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;

@@ -1,9 +1,12 @@
 <?php
 // Schreib-Endpunkt für die Mitglieder-Verwaltung. Nur für eingeloggte Admins,
-// alle Mutationen über einen action-Parameter (create/update/delete/delete-image).
-// Analog zu mitglieder/expeditions-save.php, aber EIN Foto pro Mitglied.
+// alle Mutationen über einen action-Parameter (create/update/delete/delete-image/
+// grant-consent). Analog zu mitglieder/expeditions-save.php, aber EIN Foto pro
+// Mitglied. Legt bei E-Mail-Angabe zusätzlich einen individuellen Login-Account an
+// (siehe mitglieder/accounts-lib.php) und verschickt die Willkommensmail.
 require __DIR__ . '/auth.php';
 require __DIR__ . '/../mitglieder/members-lib.php';
+require __DIR__ . '/../mitglieder/accounts-lib.php';
 
 require_admin();
 
@@ -69,8 +72,12 @@ if ($action === 'create') {
     $icon = trim((string) ($_POST['icon'] ?? ''));
     $emoji = trim((string) ($_POST['emoji'] ?? ''));
     $role = normalize_role((string) ($_POST['role'] ?? ''));
+    $email = trim((string) ($_POST['email'] ?? ''));
 
     if ($name === '') {
+        done('error');
+    }
+    if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         done('error');
     }
 
@@ -84,17 +91,26 @@ if ($action === 'create') {
         'icon' => mb_substr($icon !== '' ? $icon : mb_substr($name, 0, 1), 0, 4),
         'emoji' => mb_substr($emoji, 0, 16),
         'image' => store_member_image($id, null),
+        'consentGiven' => false,
+        'consentAt' => null,
+        'consentSource' => null,
         'createdAt' => $now,
         'updatedAt' => $now,
     ];
     $list[] = $entry;
     save_members($list);
+
+    if ($email !== '' && create_account($id, $email)) {
+        send_welcome_mail($email, $entry['name']);
+    }
+
     done('created');
 }
 
 if ($action === 'update') {
     $id = (string) ($_POST['id'] ?? '');
     $found = false;
+    $emailToApply = null;
     foreach ($list as &$entry) {
         if ($entry['id'] !== $id) {
             continue;
@@ -104,6 +120,11 @@ if ($action === 'update') {
         $text = trim((string) ($_POST['text'] ?? ($entry['text'] ?? '')));
         $icon = trim((string) ($_POST['icon'] ?? ($entry['icon'] ?? '')));
         $emoji = trim((string) ($_POST['emoji'] ?? ($entry['emoji'] ?? '')));
+        $email = trim((string) ($_POST['email'] ?? ''));
+
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            done('error');
+        }
 
         if ($name !== '') {
             $entry['name'] = substr($name, 0, 80);
@@ -114,10 +135,33 @@ if ($action === 'update') {
         $entry['emoji'] = mb_substr($emoji, 0, 16);
         $entry['image'] = store_member_image($entry['id'], $entry['image'] ?? null);
         $entry['updatedAt'] = date('c');
+        $emailToApply = $email !== '' ? $email : null;
         break;
     }
     unset($entry);
     save_members($list);
+
+    // E-Mail-Feld ist optional editierbar: legt bei erstmaliger Angabe den Account an
+    // (+ Willkommensmail) oder aktualisiert eine bestehende Adresse (E-Mail muss dann
+    // erneut verifiziert werden, siehe update_account_email()).
+    if ($found && $emailToApply !== null) {
+        $existingAcc = find_account_by_member_id($id);
+        if ($existingAcc === null) {
+            $memberName = '';
+            foreach ($list as $e) {
+                if ($e['id'] === $id) {
+                    $memberName = (string) $e['name'];
+                    break;
+                }
+            }
+            if (create_account($id, $emailToApply)) {
+                send_welcome_mail($emailToApply, $memberName);
+            }
+        } elseif (strtolower((string) $existingAcc['email']) !== strtolower($emailToApply)) {
+            update_account_email($id, $emailToApply);
+        }
+    }
+
     done($found ? 'updated' : 'error');
 }
 
@@ -130,6 +174,7 @@ if ($action === 'delete') {
     }
     $list = array_values(array_filter($list, static fn($entry) => $entry['id'] !== $id));
     save_members($list);
+    delete_account($id);
     done('deleted');
 }
 
@@ -149,6 +194,37 @@ if ($action === 'delete-image') {
     unset($entry);
     save_members($list);
     done('image-removed');
+}
+
+// Bestands-Zustimmung: Admin setzt die Zustimmung stellvertretend (Quelle 'admin'),
+// z. B. für Mitglieder aus der Zeit vor den individuellen Accounts, damit die
+// öffentliche Seite beim Umstieg nicht leer ist. Schreibt Audit-Log + Info-Mail
+// wie eine Selbst-Zustimmung (siehe mitglieder/consent-save.php).
+if ($action === 'grant-consent') {
+    $id = (string) ($_POST['id'] ?? '');
+    $now = date('c');
+    $found = false;
+    $name = $id;
+    foreach ($list as &$entry) {
+        if ($entry['id'] !== $id) {
+            continue;
+        }
+        $found = true;
+        $name = (string) ($entry['name'] ?? $id);
+        $entry['consentGiven'] = true;
+        $entry['consentAt'] = $now;
+        $entry['consentSource'] = 'admin';
+        break;
+    }
+    unset($entry);
+    if ($found) {
+        save_members($list);
+        $acc = find_account_by_member_id($id);
+        $email = $acc['email'] ?? '';
+        write_consent_log($id, $name, $email, $now, 'admin');
+        send_consent_notice_mail($name, $email, $now, 'admin');
+    }
+    done($found ? 'consent-granted' : 'error');
 }
 
 done();

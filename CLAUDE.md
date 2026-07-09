@@ -18,27 +18,32 @@ mobout/
 ├── members.php          # Öffentlicher Lese-Endpunkt für die Mitgliederliste als JSON (kein Basic Auth)
 ├── member-image.php     # Öffentlicher Bild-Streaming-Endpunkt für Mitglieder-Fotos (kein Basic Auth)
 ├── admin/               # Versteckter Admin-Bereich (eigene PHP-Session-Auth, NICHT Basic Auth)
-│   ├── index.php       # Login + Dashboard: Mitglieder-CRUD + Mitglied-Login setzen (Logo als Base64)
+│   ├── index.php       # Login + Dashboard: Mitglieder-CRUD, Zustimmungs-Übersicht, E-Mail-Templates, Datenübertragung (Logo als Base64)
 │   ├── auth.php        # Session-Auth, hardcodierter Admin (User "Admin" + bcrypt-Hash), CSRF-Helfer
-│   ├── account-lib.php # Lesen/Schreiben des geteilten Mitglied-Logins (data/.htpasswd)
-│   ├── members-save.php # CRUD-Schreib-Endpunkt für Mitglieder (action=create/update/delete/delete-image)
-│   ├── account-save.php # Setzt Benutzername + Passwort des Mitglied-Logins (schreibt data/.htpasswd)
-│   ├── data-transfer-lib.php    # Modul-Registry für Export/Import der dynamischen data/-Inhalte (MOTD, Mitglieder, Expeditionen), Backup-Rotation
+│   ├── members-save.php # CRUD-Schreib-Endpunkt für Mitglieder (action=create/update/delete/delete-image/grant-consent), legt bei E-Mail einen Account an
+│   ├── email-templates-save.php # Speichert Betreff/Text der editierbaren E-Mail-Templates
+│   ├── data-transfer-lib.php    # Modul-Registry für Export/Import der dynamischen data/-Inhalte (MOTD, Mitglieder, Expeditionen, Accounts, E-Mail-Templates, Zustimmungs-Audit-Log), Backup-Rotation
 │   ├── data-transfer-export.php # Baut ein ZIP-Bundle aller Module und liefert es als Download
 │   ├── data-transfer-import.php # Nimmt ein ZIP-Bundle entgegen, ersetzt ausgewählte Module vollständig (mit Backup)
 │   └── data-transfer-backup-delete.php # Löscht eine einzelne Sicherung aus mitglieder/data/backups/
-├── mitglieder/         # Passwortgeschützter Mitgliederbereich (Basic Auth)
-│   ├── index.php       # Eigenständige Seite (eigenes CSS, Logo als Base64); rendert MOTD- und Expeditionen-Formulare serverseitig
-│   ├── motd-save.php   # Schreib-Endpunkt für die MOTD, geschützt durch .htaccess der Umgebung
-│   ├── expeditions-save.php  # CRUD-Schreib-Endpunkt für Expeditionen (action=create/update/delete/delete-image)
+├── mitglieder/         # Mitgliederbereich (PHP-Session-Login, individuelle E-Mail-Accounts)
+│   ├── index.php       # Eigenständige Seite (eigenes CSS, Logo als Base64); Login-Gate + Crew-Karten + persönliche Konto-Sektion (Passwort, Zustimmung)
+│   ├── member-auth.php # Session-Auth (E-Mail-Login), CSRF-Helfer, erzwungener Passwortwechsel, data/-Härtung
+│   ├── accounts-lib.php # Lesen/Schreiben individueller Accounts (data/accounts.json), OTP-Ausgabe, Mail-Helfer
+│   ├── email-templates-lib.php # Editierbare E-Mail-Templates (Registry + Rendering mit Platzhaltern)
+│   ├── email-templates-seed.json # Git-getrackte Default-Texte der vier E-Mail-Templates
+│   ├── reset-request.php # Öffentlich: "Passwort vergessen", stellt Einmalpasswort aus und verschickt es
+│   ├── password-change.php # Passwort selbst ändern (verlangt aktuelles Passwort)
+│   ├── consent-save.php # Mitglied stimmt der öffentlichen Anzeige selbst zu (nur nach E-Mail-Verifizierung)
+│   ├── motd-save.php   # Schreib-Endpunkt für die MOTD, PHP-Session-geschützt
+│   ├── expeditions-save.php  # CRUD-Schreib-Endpunkt für Expeditionen (action=create/update/delete/delete-image), PHP-Session-geschützt
 │   ├── expeditions-lib.php   # Gemeinsame load/save-Funktionen inkl. Seeding-Logik
 │   ├── expeditions-seed.json # Git-getrackter Ausgangsbestand der 8 historischen Expeditionen
-│   ├── members-lib.php       # Gemeinsame load/save-Funktionen für Mitglieder inkl. Seeding-Logik
+│   ├── members-lib.php       # Gemeinsame load/save-Funktionen für Mitglieder inkl. Seeding-Logik + Consent-Feld-Normalisierung
 │   ├── members-seed.json     # Git-getrackter Ausgangsbestand der 17 migrierten Mitglieder
 │   ├── members-seed-images/  # Git-getrackte Startfotos der Mitglieder (Fallback von member-image.php)
-│   ├── data/           # Nur serverseitig, git-ignoriert (motd.txt, expeditions.json, expeditions-images/, members.json, members-images/, .htpasswd, backups/) – überlebt Deploys
-│   ├── .htaccess       # Basic-Auth-Konfiguration (Auth-Pfad wird beim Deploy injiziert → data/.htpasswd)
-│   └── .htpasswd       # Git-getrackter Default/Seed des Mitglied-Logins (aktive Datei liegt in data/.htpasswd)
+│   ├── data/           # Nur serverseitig, git-ignoriert (motd.txt, expeditions.json, expeditions-images/, members.json, members-images/, accounts.json, email-templates.json, consent-log/, backups/) – überlebt Deploys; per .htaccess ("Require all denied") gegen Direktzugriff gesperrt
+│   └── .htaccess       # Sperrt Direktzugriff auf data/ (RedirectMatch 403); KEIN Basic Auth mehr
 ├── assets/
 │   ├── images/         # Originalfotos (Personenbilder, Logos)
 │   └── data/           # Excel-Tabellen (MobOut_Teilnehmer.xlsx, MobOut_Expeditionen.xlsx)
@@ -52,11 +57,13 @@ mobout/
 - Single-Page mit Smooth-Scroll-Navigation
 - Responsive Design mit Hamburger-Menü für Mobile (≤768px)
 - Punktuell PHP (Strato-Hosting, PHP 8.3) für die "Nachricht des Tages", das Kontaktformular, die
-  dynamische Expeditionen-Verwaltung und die Mitglieder-Verwaltung (Admin) – beschränkt auf
-  `mitglieder/index.php`, `mitglieder/motd-save.php`, `motd.php`, `contact.php`, `expeditions.php`,
-  `expedition-image.php`, `mitglieder/expeditions-save.php`, `mitglieder/expeditions-lib.php`,
-  `members.php`, `member-image.php`, `mitglieder/members-lib.php` und `admin/*.php`,
-  siehe eigene Abschnitte unten
+  dynamische Expeditionen-Verwaltung, individuelle Mitglieder-Logins und die Mitglieder-Verwaltung
+  (Admin) – beschränkt auf `mitglieder/index.php`, `mitglieder/member-auth.php`,
+  `mitglieder/accounts-lib.php`, `mitglieder/email-templates-lib.php`, `mitglieder/reset-request.php`,
+  `mitglieder/password-change.php`, `mitglieder/consent-save.php`, `mitglieder/motd-save.php`,
+  `motd.php`, `contact.php`, `expeditions.php`, `expedition-image.php`,
+  `mitglieder/expeditions-save.php`, `mitglieder/expeditions-lib.php`, `members.php`,
+  `member-image.php`, `mitglieder/members-lib.php` und `admin/*.php`, siehe eigene Abschnitte unten
 
 ## Sprache
 
@@ -104,23 +111,23 @@ sondern nur noch optionale historische Referenz.
 
 ## Mitgliederbereich (`mitglieder/`)
 
-Passwortgeschützter interner Bereich unter `mobout.de/mitglieder/` (eigene URL, nicht Teil der
-Single-Page). Verlinkt aus der Hauptnavigation in `index.html` (Link `.nav-members`).
+Interner Bereich unter `mobout.de/mitglieder/` (eigene URL, nicht Teil der Single-Page). Verlinkt aus
+der Hauptnavigation in `index.html` (Link `.nav-members`).
 
-- **Schutz:** HTTP Basic Auth über `.htaccess` (Strato = Apache). Ein Nutzer, **ein Passwort für alle**.
-- **Passwort (aktiv):** Die aktive `.htpasswd` liegt deploy-sicher unter `mitglieder/data/.htpasswd`
-  (git-ignoriert, überlebt `rsync --delete`). Sie wird über die **Admin-Seite** gesetzt/geändert
-  (siehe „Mitglieder-Verwaltung (Admin)"), damit Änderungen keinen Deploy brauchen und Deploys überstehen.
-- **Passwort (Seed/Default):** `mitglieder/.htpasswd` mit bcrypt-Hash bleibt **im Repo** eingecheckt
-  (Repo ist privat), dient aber nur noch als Ausgangsbestand: Der Deploy kopiert ihn einmalig nach
-  `data/.htpasswd`, falls dort noch keiner existiert (`test -f data/.htpasswd || cp .htpasswd data/.htpasswd`).
-- **Auth-Pfad:** `.htaccess` enthält Platzhalter `__HTPASSWD_PATH__`, der beim Deploy pro Branch durch den
-  absoluten Serverpfad `…/mitglieder/data/.htpasswd` ersetzt wird (analog zu `__BUILD_INFO__`).
+- **Schutz:** PHP-Session-Login (`mitglieder/member-auth.php`), analog zum Admin-Bereich – **kein**
+  Apache Basic Auth mehr. Jedes Mitglied hat einen **individuellen Account** (E-Mail als Loginname),
+  siehe „Individuelle Logins & Anzeige-Zustimmung" unten.
 - **Seite:** `mitglieder/index.php` ist eigenständig (eigenes CSS, Logo als Base64), da `assets/`
-  nicht auf den Server deployt wird.
-- **Grenzen:** nativer Browser-Login (nicht gestaltbar), Logout browserabhängig; nur über HTTPS sicher.
+  nicht auf den Server deployt wird. Rendert das Login-/Passwort-vergessen-Formular, bei
+  ausstehendem Passwortwechsel ein reduziertes Passwort-Formular, sonst die vollen Crew-Karten
+  plus eine persönliche Konto-Sektion (`#konto-bereich`).
+- **Session-Cookies:** `secure` nur bei echtem HTTPS gesetzt (erkannt über `$_SERVER['HTTPS']` /
+  `X-Forwarded-Proto` / Port 443) – Production läuft über HTTPS (Cookie hart `Secure`), die
+  Testumgebung **staging.mobout.de bewusst über HTTP** (kein Zertifikat für die Subdomain), dort
+  ohne `Secure`-Flag, sonst würde der Browser das Session-Cookie verwerfen und der Login griffe nicht.
 - **Inhalt:** `mitglieder/index.php` zeigt Info-Karten für die Crew: "Expeditionen" (Verwaltung,
-  siehe eigener Abschnitt), "Instagram", "Navionics Account" und "Nachricht des Tages".
+  siehe eigener Abschnitt), "Instagram", "Navionics Account", "Nachricht des Tages" und "Konto"
+  (Passwort ändern, Zustimmung zur Anzeige).
   - Karte "Navionics Account": Zugangsdaten für den gemeinsamen Navionics-Account (Boating HD App,
     Tiefenkarten). Die Karte selbst in `mitglieder/index.php` ist die Quelle der Wahrheit für diese
     Zugangsdaten (nicht hier duplizieren). Abo läuft aktuell bis 14.05.2027 – bei
@@ -134,22 +141,90 @@ Single-Page). Verlinkt aus der Hauptnavigation in `index.html` (Link `.nav-membe
     `instagram.com/mobout.de`; ist der Account privat, sind Beiträge für Nicht-Follower nicht
     sichtbar.
 
+## Individuelle Logins & Anzeige-Zustimmung
+
+Jedes Mitglied hat einen eigenen Account (E-Mail als Loginname) statt des früheren einen geteilten
+Basic-Auth-Zugangs. Zusätzlich wird ein Mitglied auf der öffentlichen Website **nur** angezeigt, wenn
+es der Anzeige selbst (nach verifizierter E-Mail) zugestimmt hat – ein DSGVO-naher Selbst-Zustimmungs-
+Mechanismus.
+
+- **Datenmodell (Secrets ≠ Anzeigedaten, zwei getrennte Speicher):**
+  - `mitglieder/data/accounts.json` (git-ignoriert, per `.htaccess` gegen Direktzugriff gesperrt):
+    pro Mitglied `memberId`, `email`, `emailVerified`, `passwordHash`, `mustChangePassword`,
+    `createdAt`/`updatedAt`. Wird **nie** öffentlich ausgeliefert.
+  - `mitglieder/data/members.json`: bekommt zusätzlich die nicht-geheimen Felder `consentGiven`
+    (bool), `consentAt` (ISO-8601 oder `null`), `consentSource` (`self` | `admin` | `null`).
+    `mitglieder/members-lib.php`s `load_members()` normalisiert fehlende Consent-Felder beim Lesen
+    (rückwärtskompatibel zu Altbeständen ohne Migrationsskript).
+- **OTP = Passwort-Hash:** Ein Einmalpasswort wird nicht separat gespeichert. `issue_otp()` in
+  `mitglieder/accounts-lib.php` setzt `passwordHash = bcrypt(OTP)` und `mustChangePassword = true`.
+  Der Login mit dem OTP verifiziert gegen genau diesen Hash; ein **erfolgreicher Login setzt
+  `emailVerified = true`** (beweist Zugriff auf das Postfach) und erzwingt wegen
+  `mustChangePassword` sofort einen Passwortwechsel (`mitglieder/password-change.php`). Derselbe Weg
+  deckt Erst-Einrichtung **und** „Passwort vergessen" (`mitglieder/reset-request.php`, öffentlich,
+  generische Antwort gegen User-Enumeration) ab. **Bewusst ohne Ablauf und ohne Rate-Limit**
+  (Einfachheit vor Robustheit).
+- **Zustimmung:** `mitglieder/consent-save.php` erlaubt die Selbst-Zustimmung nur, wenn `emailVerified`
+  **und** kein Passwortwechsel mehr aussteht. Schreibt zusätzlich eine unveränderliche JSON-Datei je
+  Zustimmung unter `mitglieder/data/consent-log/` (Zeitpunkt **inhaltlich im JSON**, nicht als
+  Datei-mtime – die überlebt Kopieren/Backup/Transfer nicht zuverlässig) und verschickt eine
+  Info-/Audit-Mail an `info@mobout.de` (Template `consent-notice`). Der Admin kann stellvertretend
+  eine **Bestands-Zustimmung** setzen (`admin/members-save.php`, `action=grant-consent`,
+  `consentSource=admin`) – z. B. für Mitglieder aus der Zeit vor den individuellen Accounts, damit
+  die öffentliche Seite nicht leer ist. Beide Wege sind im Admin-Panel „Zustimmungs-Übersicht"
+  (`#zustimmungen-bereich`) transparent einsehbar (sonst nur im Postfach bzw. in Server-Dateien sichtbar).
+- **Öffentliche Filterung:** `members.php` liefert nur Mitglieder mit `consentGiven === true` und
+  nur eine Feld-Whitelist (keine internen Zustimmungs-/Account-Metadaten). `member-image.php` prüft
+  ebenfalls `consentGiven`, damit ein Foto nicht per direkter URL trotz fehlender Zustimmung abrufbar
+  ist.
+- **Datentrennung/Berechtigungen:** Passwort ändern und Zustimmung sind streng auf das eingeloggte
+  Mitglied selbst begrenzt (`memberId` kommt ausschließlich aus der Session, nie aus einem
+  Request-Parameter). Mitglieder-**Profile** (Name, Rolle, Text, Icon, Foto, E-Mail) bearbeitet
+  ausschließlich der Admin – kein Mitglied bearbeitet ein Profil, weder ein fremdes noch das eigene.
+  Gruppeninhalte (Expeditionen, MOTD) bleiben wie bisher für jedes eingeloggte Mitglied bearbeitbar.
+
+## E-Mail-Templates
+
+Alle vom Mitgliederbereich ausgelösten Mails (Willkommen, Einmalpasswort, Passwort geändert,
+Zustimmungs-Info) ziehen Betreff und Text aus **admin-editierbaren Templates** statt festem Code-Text –
+gleiches `data/`-Seed-Muster wie MOTD/Expeditionen.
+
+- **Speicher:** `mitglieder/data/email-templates.json` (git-ignoriert, überlebt Deploys), Seed-Fallback
+  `mitglieder/email-templates-seed.json` (git-getrackt, deutsche Default-Texte).
+- **Lib:** `mitglieder/email-templates-lib.php` mit der Registry `email_template_defs()` (vier
+  Templates + je eine Whitelist gültiger Platzhalter) und `render_email_template()` (ersetzt nur
+  Platzhalter im Format `{{PLATZHALTER}}`, die für das jeweilige Template erlaubt sind).
+- **Die vier Templates:**
+  - `welcome` (an das Mitglied): `{{NAME}}`, `{{EMAIL}}`, `{{MEMBER_AREA_URL}}`
+  - `otp` (an das Mitglied, Passwort-Zurückgesetzt-Mail): `{{NAME}}`, `{{ONETIMEPASSWORD}}`,
+    `{{MEMBER_AREA_URL}}`
+  - `password-changed` (an das Mitglied): `{{NAME}}`, `{{CHANGE_DATE}}`, `{{MEMBER_AREA_URL}}`
+  - `consent-notice` (an `info@mobout.de`, Audit): `{{NAME}}`, `{{EMAIL}}`, `{{CONSENT_DATE}}`,
+    `{{CONSENT_SOURCE}}`
+- **Versand:** `mitglieder/accounts-lib.php` (`send_welcome_mail()`, `send_otp_mail()`,
+  `send_password_changed_mail()`, `send_consent_notice_mail()`) nutzt das `contact.php`-Muster
+  (PHP `mail()`, `From`/`Reply-To`, CR/LF-Strip gegen Header-Injection, `Content-Type: text/plain;
+  charset=utf-8`), zusätzlich mit `mb_encode_mimeheader()` für den Betreff (Umlaute/Namen).
+- **Admin-UI:** Panel „E-Mail-Templates" in `admin/index.php` (`#email-templates-bereich`) –
+  Betreff-Feld + Textarea je Template, darunter die für dieses Template gültigen Platzhalter.
+  Speichert über `admin/email-templates-save.php`.
+
 ## Nachricht des Tages (MOTD)
 
 Kleines PHP-Testfeature, um den Mechanismus "Mitglied editiert im geschützten Bereich → Inhalt
 erscheint automatisch auf der öffentlichen Website" zu validieren:
 
 - Mitglied trägt im Mitgliederbereich (Karte "Nachricht des Tages") einen Text ein und speichert
-  über `mitglieder/motd-save.php` (liegt im geschützten Verzeichnis, erbt den Basic-Auth-Schutz
-  automatisch). Der Text landet in `mitglieder/data/motd.txt` auf dem Server.
+  über `mitglieder/motd-save.php` (PHP-Session-geschützt: `require_member()` + CSRF-Check). Der Text
+  landet in `mitglieder/data/motd.txt` auf dem Server.
 - `mitglieder/data/` ist **git-ignoriert** (server-only). Der Deploy-Workflow nutzt `rsync --delete`
   (damit umbenannte/gelöschte Dateien wie alte `.html`-Versionen wirklich vom Server verschwinden),
   schließt `mitglieder/data/` aber explizit per `--exclude=data/` von der Löschung aus, damit
   `motd.txt` Deploys übersteht.
-- `motd.php` (Repo-Root, **nicht** durch Basic Auth geschützt) liest die Datei serverseitig vom
-  Dateisystem aus und liefert sie unverändert als `text/plain` aus – funktioniert trotz Apache-Auth
-  auf `mitglieder/`, weil diese nur HTTP-Requests durch Apache betrifft, nicht lokale
-  Dateisystemzugriffe. Kein HTML-Escaping nötig/gewollt, da der Text nie als HTML interpretiert wird.
+- `motd.php` (Repo-Root, öffentlich, kein Login nötig) liest die Datei serverseitig vom
+  Dateisystem aus und liefert sie unverändert als `text/plain` aus – reiner Dateisystemzugriff,
+  unabhängig vom Session-Login auf `mitglieder/`. Kein HTML-Escaping nötig/gewollt, da der Text nie
+  als HTML interpretiert wird.
 - `index.html` lädt `motd.php` per `fetch()` und blendet die Nachricht als Banner im Hero-Bereich
   (unter dem "Kontaktiere uns"-Button) ein – nur wenn ein Text gesetzt ist, sonst nichts. Einfügung
   ausschließlich über `textContent` (nie `innerHTML`), um XSS auszuschließen.
@@ -189,14 +264,15 @@ ohne neuen Deploy.
   anlegt/bearbeitet/löscht, schreibt `save_expeditions()` die echte Datendatei – ab dann ist die
   Seed-Datei für den laufenden Betrieb irrelevant, bleibt aber als dokumentierter Startbestand im
   Repo. Kein manueller Schritt auf Staging/Produktion nötig.
-- **Schreiben:** `mitglieder/expeditions-save.php` (geschützt durch `.htaccess`) verarbeitet alle
-  Mutationen über einen `action`-Parameter (`create` / `update` / `delete` / `delete-image`),
-  inklusive Bild-Upload-Validierung (Whitelist jpg/jpeg/png/webp, `getimagesize()`-Check, max. 5 MB
-  pro Bild, max. 8 Bilder pro Expedition, serverseitig generierte Dateinamen statt Original-Namen).
-- **Lesen:** `expeditions.php` (Repo-Root, **nicht** durch Basic Auth geschützt) liest die Daten
-  serverseitig vom Dateisystem – funktioniert wie `motd.php` trotz Apache-Auth auf `mitglieder/`,
-  da reiner Dateisystemzugriff keine HTTP-Requests auf das geschützte Verzeichnis sind.
-- **Bilder ausliefern:** `expedition-image.php` (Repo-Root, ebenfalls kein Basic Auth) liest eine
+- **Schreiben:** `mitglieder/expeditions-save.php` (PHP-Session-geschützt: `require_member()` +
+  CSRF-Check) verarbeitet alle Mutationen über einen `action`-Parameter (`create` / `update` /
+  `delete` / `delete-image`), inklusive Bild-Upload-Validierung (Whitelist jpg/jpeg/png/webp,
+  `getimagesize()`-Check, max. 5 MB pro Bild, max. 8 Bilder pro Expedition, serverseitig generierte
+  Dateinamen statt Original-Namen).
+- **Lesen:** `expeditions.php` (Repo-Root, öffentlich) liest die Daten serverseitig vom Dateisystem
+  – funktioniert wie `motd.php` unabhängig vom Session-Login auf `mitglieder/`, da reiner
+  Dateisystemzugriff keine HTTP-Requests auf den geschützten Bereich sind.
+- **Bilder ausliefern:** `expedition-image.php` (Repo-Root, öffentlich) liest eine
   einzelne Bilddatei aus `mitglieder/data/expeditions-images/` und streamt sie mit passendem
   `Content-Type`. Enthält strikten Pfad-Traversal-Schutz (`basename()`-Check + `realpath()`-
   Containment-Prüfung), damit über den `f`-Parameter keine beliebigen Dateien ausgelesen werden
@@ -214,19 +290,25 @@ Verwaltung der auf der Website angezeigten **Mitglieder/Teilnehmer** (Personen) 
 Admin. Übernimmt das Seed-/`data/`-Prinzip der Expeditionen. **Begriffe strikt trennen:**
 
 - **Admin** = hardcodierter Einzel-Account (Benutzer `Admin` + festes Passwort), eigene versteckte
-  Login-Seite. Verwaltet Mitglieder und den Mitglied-Login.
-- **Mitglied-Login** = *ein* geteilter Basic-Auth-Zugang (Benutzername + Passwort) für
-  `mobout.de/mitglieder/`, für alle Teilnehmer gleich. Wird vom Admin gesetzt.
-- **Mitglieder/Teilnehmer** = die angezeigten Personen (Datensätze). Es gibt **keine** individuellen
-  Mitglieder-Logins und keine Selbstbearbeitung – alles läuft über den Admin.
+  Login-Seite. Verwaltet Mitglieder, deren individuelle Accounts und die Zustimmungs-Übersicht.
+- **Mitglied-Login** = seit den individuellen Accounts (siehe „Individuelle Logins &
+  Anzeige-Zustimmung") **kein geteilter Zugang mehr** – jedes Mitglied hat seinen eigenen Login
+  (E-Mail + selbst gesetztes Passwort). Der Admin legt nur die E-Mail an; das Passwort setzt sich
+  jedes Mitglied über „Passwort vergessen" selbst.
+- **Mitglieder/Teilnehmer** = die angezeigten Personen (Datensätze). Profile (Name, Rolle, Text,
+  Icon, Foto, E-Mail) bearbeitet weiterhin ausschließlich der Admin – kein Mitglied bearbeitet ein
+  Profil. Passwort und Zustimmung sind die einzigen Selbstbearbeitungen, jeweils strikt auf das
+  eigene Mitglied begrenzt.
 
 **Datenmodell:** `mitglieder/data/members.json` (git-ignoriert, server-only), JSON-Array. Ein Mitglied:
 `id`, `name` (Anzeigename), `role` (`team` | `supporter` | `anwaerter`), `text` (Kurztext),
 `icon` (Kürzel/Emoji, Ersatz-Avatar **wenn kein Foto**), `emoji` (kleines Icon **nach dem Text**,
-optional, unabhängig vom Foto), `image` (Dateiname, optional, ein Foto), `createdAt`/`updatedAt`.
-Die beiden Icon-Felder sind bewusst getrennt: `icon` ersetzt das Foto, `emoji` ist ein dekoratives
-Symbol hinter dem Beschreibungstext. **Reihenfolge = Anzeige-Reihenfolge** (kein Sortieren; neue
-Einträge ans Ende).
+optional, unabhängig vom Foto), `image` (Dateiname, optional, ein Foto), `consentGiven`/`consentAt`/
+`consentSource` (Zustimmung zur öffentlichen Anzeige, siehe „Individuelle Logins &
+Anzeige-Zustimmung"), `createdAt`/`updatedAt`. Die beiden Icon-Felder sind bewusst getrennt: `icon`
+ersetzt das Foto, `emoji` ist ein dekoratives Symbol hinter dem Beschreibungstext. Die E-Mail-Adresse
+und alle Login-Felder liegen **nicht** hier, sondern getrennt in `mitglieder/data/accounts.json`
+(siehe unten). **Reihenfolge = Anzeige-Reihenfolge** (kein Sortieren; neue Einträge ans Ende).
 
 **Rollen → Sektion in `index.html`:** `team` → „Das Team", `supporter` → „Dabei waren auch",
 `anwaerter` → „Anwärter" (Grid oberhalb der Expeditionen). Container-IDs: `#team-grid`,
@@ -243,28 +325,37 @@ Mitglieder), solange `data/members.json` fehlt. Startfotos liegen git-getrackt i
   unabhängig vom Mitglied-Login, damit dessen Änderung den Admin nie aussperrt. Passwort ändern: neuen
   Hash erzeugen (`php -r "echo password_hash('NEUES_PW', PASSWORD_BCRYPT);"`) und in `admin/auth.php`
   eintragen, committen, deployen.
-- `admin/index.php`: Login-Formular bzw. Dashboard mit Mitglieder-CRUD (nach Rolle gruppiert, Foto-Upload
-  und -Entfernen) und Panel „Mitglied-Login" (Benutzername + Passwort setzen).
-- `admin/members-save.php`: `action=create|update|delete|delete-image`, Session- + CSRF-geschützt,
-  ein Foto pro Mitglied (Bild-Validierung wie Expeditionen: Whitelist jpg/jpeg/png/webp,
-  `getimagesize()`, max. 5 MB, serverseitiger Dateiname `<id>.<ext>`).
-- `admin/account-save.php` + `admin/account-lib.php`: schreiben `mitglieder/data/.htpasswd`
-  (bcrypt via `password_hash`), Benutzername-Validierung (kein `:`), Passwort min. 6 Zeichen.
+- `admin/index.php`: Login-Formular bzw. Dashboard mit Mitglieder-CRUD (nach Rolle gruppiert,
+  E-Mail-Feld, Foto-Upload/-Entfernen), Panel „Zustimmungs-Übersicht" (`#zustimmungen-bereich`,
+  Tabelle aller Mitglieder mit E-Mail, Verifiziert-Status, Zustimmungs-Status/-Datum/-Quelle und
+  Button zur Bestands-Zustimmung) und Panel „E-Mail-Templates" (`#email-templates-bereich`).
+- `admin/members-save.php`: `action=create|update|delete|delete-image|grant-consent`, Session- +
+  CSRF-geschützt, ein Foto pro Mitglied (Bild-Validierung wie Expeditionen: Whitelist
+  jpg/jpeg/png/webp, `getimagesize()`, max. 5 MB, serverseitiger Dateiname `<id>.<ext>`). Bei
+  Angabe/Änderung einer E-Mail wird über `mitglieder/accounts-lib.php` ein Account angelegt/
+  aktualisiert und die Willkommensmail verschickt; `grant-consent` setzt die Bestands-Zustimmung
+  (siehe „Individuelle Logins & Anzeige-Zustimmung").
+- `admin/email-templates-save.php`: speichert Betreff/Text der vier E-Mail-Templates, Session- +
+  CSRF-geschützt.
 - **Versteckter Zugang:** dezenter Link (unauffälliges `·`) im Footer von `index.html` → `/admin/`.
   Kein Menüeintrag; echte Absicherung ist der PHP-Login, nicht die Obskurität.
 
-**Lesen/Bilder (Repo-Root, kein Basic Auth, wie bei Expeditionen):**
-- `members.php` liefert `data/members.json` (bzw. Seed) als JSON.
+**Lesen/Bilder (Repo-Root, öffentlich, wie bei Expeditionen):**
+- `members.php` liefert `data/members.json` (bzw. Seed) als JSON – **gefiltert auf
+  `consentGiven === true`** und nur eine Feld-Whitelist (`id,name,role,text,icon,emoji,image`), damit
+  weder nicht zustimmende Mitglieder noch interne Zustimmungs-Metadaten öffentlich sichtbar werden.
 - `member-image.php` streamt ein Foto mit Pfad-Traversal-Schutz; sucht zuerst in
-  `mitglieder/data/members-images/`, dann als Fallback in `mitglieder/members-seed-images/`.
+  `mitglieder/data/members-images/`, dann als Fallback in `mitglieder/members-seed-images/` – liefert
+  nur aus, wenn das zugehörige Mitglied `consentGiven === true` hat.
 - `index.html` lädt per `fetch('/members.php')`, gruppiert nach Rolle und baut die `.team-member`-Karten
   per DOM auf (`textContent`, nie `innerHTML`); Foto via `member-image.php`, sonst Gradient-Avatar mit
   `icon`-Text.
 
 ## Datenübertragung (Admin)
 
-Alle drei dynamischen, git-ignorierten Datenbestände (MOTD, Mitglieder, Expeditionen – jeweils
-`mitglieder/data/...`, siehe oben) existieren pro Umgebung (production/staging) getrennt und entstehen
+Alle dynamischen, git-ignorierten Datenbestände (MOTD, Mitglieder, Expeditionen, Accounts,
+E-Mail-Templates, Zustimmungs-Audit-Log – jeweils `mitglieder/data/...`, siehe oben) existieren pro
+Umgebung (production/staging) getrennt und entstehen
 ausschließlich durch Nutzereingaben in der App, nicht durch Deploys. Damit sie sich trotzdem sichern,
 zwischen Umgebungen übertragen und für lokale Migrationen/Transformationen bearbeiten lassen, gibt es im
 Admin-Bereich ein Export/Import als ein ZIP-Bundle. **Drei Zwecke in einem Mechanismus:** Backup
@@ -281,24 +372,33 @@ müssten Inhalte doppelt von Hand in beiden Umgebungen gepflegt werden, mit dem 
 abweichender Stände.
 
 - **Architektur:** `admin/data-transfer-lib.php` definiert eine zentrale Modul-Registry
-  (`data_transfer_modules()`) mit den Modulen `motd`, `members`, `expeditions`. Jedes Modul hat eine
-  `export`- und eine `import`-Funktion; Export-/Import-Endpunkt sowie die Admin-UI iterieren generisch
-  über die Registry. **Erweiterbar:** ein künftiger weiterer dynamischer Datentyp nach demselben
-  `data/`-Prinzip wird durch zwei neue Funktionen plus einen weiteren Registry-Eintrag ergänzt – die
-  Endpunkte und die UI müssen dafür nicht angefasst werden. Bestehende `load_*()`/`save_*()`-Funktionen
-  aus `mitglieder/members-lib.php`/`mitglieder/expeditions-lib.php` werden wiederverwendet; für MOTD
+  (`data_transfer_modules()`) mit den Modulen `motd`, `members`, `expeditions`, `accounts`,
+  `email-templates`, `consent-log`. Jedes Modul hat eine `export`- und eine `import`-Funktion;
+  Export-/Import-Endpunkt sowie die Admin-UI iterieren generisch über die Registry (jedes Modul im
+  UI einzeln per Checkbox wähl-/abwählbar). **Erweiterbar:** ein künftiger weiterer dynamischer
+  Datentyp nach demselben `data/`-Prinzip wird durch zwei neue Funktionen plus einen weiteren
+  Registry-Eintrag ergänzt – die Endpunkte und die UI müssen dafür nicht angefasst werden. Bestehende
+  `load_*()`/`save_*()`-Funktionen aus `mitglieder/members-lib.php`/`mitglieder/expeditions-lib.php`/
+  `mitglieder/accounts-lib.php`/`mitglieder/email-templates-lib.php` werden wiederverwendet; für MOTD
   (bisher ohne eigene Lib-Datei) gibt es kleine `read_motd()`/`write_motd()`-Helfer in derselben Datei.
+  **`consent-log` ist additiv statt vollständig ersetzend:** ein Import ergänzt nur fehlende
+  Audit-Dateien, überschreibt/löscht nie vorhandene – ein Audit-Log darf durch einen Import keine
+  Nachweise verlieren.
+- **Sensibel:** das Modul `accounts` enthält Passwort-Hashes und E-Mail-Adressen – wie alle Module nur
+  per Admin-Login herunterladbar, aber beim Umgang mit der ZIP-Datei besonders vorsichtig behandeln.
 - **Bundle-Format:** ein ZIP-Archiv (`ZipArchive`) mit `manifest.json` (Version, Zeitstempel, Host,
-  enthaltene Module) sowie je Modul der JSON-Datei und den referenzierten Bildern
+  enthaltene Module) sowie je Modul der JSON-Datei und den referenzierten Bildern/Dateien
   (`members/members.json` + `members/images/...`, `expeditions/expeditions.json` +
-  `expeditions/images/...`, `motd/motd.txt`).
+  `expeditions/images/...`, `motd/motd.txt`, `accounts/accounts.json`,
+  `email-templates/email-templates.json`, `consent-log/<datei>.json` je Zustimmung).
 - **Export:** `admin/data-transfer-export.php` (Session- + CSRF-geschützt) baut das ZIP aus allen
   Modulen und liefert es als Download (`mobout-data-<host>-<Zeitstempel>.zip`).
 - **Import:** `admin/data-transfer-import.php` (Session- + CSRF-geschützt) validiert das hochgeladene
   ZIP (Manifest-Version, Zip-Slip-Schutz für alle Eintragspfade, Bild-Validierung wie bei normalen
   Uploads: Whitelist jpg/jpeg/png/webp, `getimagesize()`, 5 MB/Bild, 50 MB/ZIP). Der Admin wählt per
   Checkbox, welche Module importiert werden sollen; **jedes ausgewählte Modul wird vollständig ersetzt**
-  (keine Zusammenführung) – vor dem Überschreiben wird automatisch ein Backup des Vorzustands nach
+  (keine Zusammenführung, Ausnahme `consent-log`: additiv, siehe oben) – vor dem Überschreiben wird
+  automatisch ein Backup des Vorzustands nach
   `mitglieder/data/backups/<Zeitstempel>/<modul>/` geschrieben (git-ignoriert, wie `data/` insgesamt,
   vom Deploy-`--exclude=data/` mitgeschützt). Module sind unabhängig voneinander: schlägt die
   Validierung eines Moduls fehl, bleiben die anderen ausgewählten Module unberührt.
@@ -319,6 +419,18 @@ abweichender Stände.
   Import funktioniert (gleiche Backup-vorher-Logik, damit auch ein Restore rückgängig gemacht werden
   kann).
 
+## Datenmigration & Cutover (Basic Auth → individuelle Logins)
+
+Der Umstieg auf individuelle Accounts + Zustimmungs-Filterung ist **rückwärtskompatibel by design** –
+kein destruktives Migrationsskript nötig: `load_members()` normalisiert fehlende Consent-Felder beim
+Lesen (alte Datensätze bekommen sichere Defaults, werden erst beim nächsten Speichern persistiert);
+`accounts.json`/`email-templates.json` sind additiv (Seed-Fallback bis zum ersten Schreiben). Cutover
+pro Umgebung (erst Staging, dann Production): (1) Backup-ZIP über „Datenübertragung" ziehen, (2)
+Code deployen, (3) verifizieren (öffentliche Seite lädt weiter, zeigt aber erstmal niemanden ohne
+Zustimmung), (4) pro Mitglied im Admin die E-Mail nachtragen (Account + Willkommensmail) – alternativ
+per Export→Bearbeiten→Import, falls Bestands-E-Mails vorliegen, (5) Bestands-Zustimmung für die
+gewünschten Mitglieder setzen, damit die Seite nicht leer bleibt.
+
 ---
 
 # Deployment-Kontext
@@ -335,7 +447,7 @@ abweichender Stände.
 - Zwei-Ziel-Push: `git push origin <branch>` geht an NAS (Master-Backup) + GitHub
 - Pull nur vom NAS (`origin` fetch = NAS, push = NAS + GitHub)
 - Übertragen werden `index.html` + `motd.php` + `contact.php` + `expeditions.php` + `expedition-image.php` + `members.php` + `member-image.php` + `admin/` + `mitglieder/` (wenn `assets/` deployrelevant wird: Workflow anpassen)
-- Nach dem rsync seedet ein SSH-Schritt einmalig `mitglieder/data/.htpasswd` aus `mitglieder/.htpasswd`, falls noch nicht vorhanden (Mitglied-Login überlebt so Deploys)
+- Kein Basic-Auth-Seed-Schritt mehr nötig (individuelle Accounts statt geteiltem Login): `accounts.json`, `email-templates.json`, `consent-log/` und die `data/`-Härtung entstehen zur Laufzeit (`member_ensure_data_hardening()` in `mitglieder/member-auth.php`) und sind über `--exclude=data/` bereits deploy-sicher
 
 ## Arbeitsweise
 
@@ -351,20 +463,34 @@ abweichender Stände.
 
 # Offene Punkte / Bekannte Einschränkungen
 
-## HTTPS/SSL auf mobout.de — ✅ Gelöst (2026-07-08)
+## HTTPS/SSL auf mobout.de — ✅ Gelöst für Production (2026-07-08)
 
-**Status:** HTTPS ist jetzt **aktiv und erzwungen** auf mobout.de und staging.mobout.de.
+**Status:** HTTPS ist **aktiv und erzwungen auf Production** (mobout.de). **staging.mobout.de läuft
+bewusst nur über HTTP** (kein SSL-Zertifikat für die Subdomain, kein Redirect) – so gewollt, siehe
+„Arbeitsweise": Staging ist reine Testumgebung, Production trägt das Zertifikat. Der Code muss daher
+für beide Fälle funktionieren, siehe nächster Absatz.
 
 **Was gemacht wurde:**
-- **SSL-Zertifikat:** STRATO SSL Starter (DV) für mobout.de aktiviert (kostenlos für erste 6 Monate: 0,50 €/Monat, danach 3,50 €/Monat)
-- **HTTP→HTTPS-Redirect:** Automatisch aktiviert durch Strato ("301-Weiterleitung" im SSL-Panel)
+- **SSL-Zertifikat:** STRATO SSL Starter (DV) für mobout.de aktiviert (kostenlos für erste 6 Monate: 0,50 €/Monat, danach 3,50 €/Monat) – **nur für die Production-Domain**, nicht für staging.mobout.de
+- **HTTP→HTTPS-Redirect:** Automatisch aktiviert durch Strato ("301-Weiterleitung" im SSL-Panel), gilt nur für mobout.de
 - **HSTS-Header:** Root `.htaccess` mit HTTP Strict-Transport-Security (max-age=31536000; includeSubDomains; preload)
-- **Session-Cookie-Sicherheit:** `admin/auth.php` mit expliziten Flags (Secure, HttpOnly, SameSite=Lax)
+- **Session-Cookie-Sicherheit:** `admin/auth.php` und `mitglieder/member-auth.php` setzen die
+  Cookie-Parameter **vor** `session_start()` und ermitteln `secure` dynamisch über
+  `admin_request_is_https()` / `member_request_is_https()` (prüft `$_SERVER['HTTPS']`,
+  `X-Forwarded-Proto`, Port 443): auf Production (HTTPS) hart `Secure`, auf der HTTP-Testumgebung
+  staging ohne `Secure` – sonst würde der Browser das Session-Cookie über HTTP verwerfen und kein
+  Login (weder Admin noch Mitglieder) würde dort funktionieren. Ein gefälschter
+  `X-Forwarded-Proto`-Header kann das Cookie nur strenger machen (Secure), nie unsicherer – kein
+  Downgrade-Risiko für Production. `HttpOnly` und `SameSite=Lax` gelten in beiden Umgebungen hart.
 
-**Sicherheitsauswirkung:**
+**Sicherheitsauswirkung (Production):**
 - ✅ Admin-Passwort wird verschlüsselt übertragen (TLS in Strato 301-Redirect + Browser HTTPS)
-- ✅ Mitglied-Login (Basic Auth) wird verschlüsselt übertragen
+- ✅ Mitglieder-Login (individuelle E-Mail-Accounts, PHP-Session) wird verschlüsselt übertragen
 - ✅ Session-Cookies können nicht von JavaScript gelesen werden (XSS-Schutz)
 - ✅ Cross-Site-Request-Forgery (CSRF) durch SameSite=Lax Cookies gemindert
 - ✅ Browser merkt sich HTTPS für zukünftige Besuche (HSTS); Preload-Liste schützt auch erste Besuche
 - ✅ Alte HTTP-Links werden automatisch zu HTTPS umgeleitet (nutzerfreundlich)
+
+**Bewusste Einschränkung (Staging):** Auf staging.mobout.de laufen Logins unverschlüsselt (HTTP), da
+keine Produktivdaten/-passwörter dort dauerhaft schützenswert sind und die Testumgebung explizit ohne
+Zertifikat betrieben wird.

@@ -1,8 +1,9 @@
 <?php
 require __DIR__ . '/auth.php';
-require __DIR__ . '/../mitglieder/members-lib.php';
-require __DIR__ . '/account-lib.php';
-require __DIR__ . '/data-transfer-lib.php';
+require_once __DIR__ . '/../mitglieder/members-lib.php';
+require_once __DIR__ . '/../mitglieder/accounts-lib.php';
+require_once __DIR__ . '/../mitglieder/email-templates-lib.php';
+require_once __DIR__ . '/data-transfer-lib.php';
 
 // Logout
 if (($_GET['logout'] ?? '') === '1') {
@@ -39,9 +40,9 @@ $msgMap = [
     'updated' => 'Änderungen gespeichert.',
     'deleted' => 'Mitglied gelöscht.',
     'image-removed' => 'Foto entfernt.',
-    'account-saved' => 'Mitglied-Login aktualisiert.',
+    'consent-granted' => 'Zustimmung gespeichert.',
+    'templates-saved' => 'E-Mail-Templates gespeichert.',
     'error' => 'Aktion fehlgeschlagen – bitte Eingaben prüfen.',
-    'account-error' => 'Login nicht gespeichert: Benutzername (kein „:") und Passwort (min. 6 Zeichen) prüfen.',
     'export-error' => 'Export fehlgeschlagen.',
     'import-ok' => 'Import abgeschlossen.',
     'import-error' => 'Import fehlgeschlagen.',
@@ -50,7 +51,7 @@ $msgMap = [
 ];
 if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
     $flash = $msgMap[$_GET['msg']];
-    $flashType = in_array($_GET['msg'], ['error', 'account-error', 'export-error', 'import-error', 'backup-delete-error'], true) ? 'err' : 'ok';
+    $flashType = in_array($_GET['msg'], ['error', 'export-error', 'import-error', 'backup-delete-error'], true) ? 'err' : 'ok';
     if (in_array($_GET['msg'], ['import-ok', 'import-error'], true) && isset($_GET['info'])) {
         $flash .= ' ' . (string) $_GET['info'];
     }
@@ -132,6 +133,9 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
             display: inline-block; background: var(--secondary-color); color: white; font-size: 0.7rem;
             font-weight: 600; padding: 0.1rem 0.55rem; border-radius: 999px; margin-left: 0.5rem; vertical-align: middle;
         }
+        .consent-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .consent-table th, .consent-table td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border-color); }
+        .consent-table th { color: var(--secondary-color); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
         label { display: block; margin: 0.7rem 0 0.2rem; font-size: 0.9rem; font-weight: 500; }
         input[type="text"], input[type="password"], textarea, select {
             padding: 0.55rem; border: 1px solid var(--border-color); border-radius: 6px;
@@ -205,11 +209,15 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
         $r = in_array($m['role'] ?? '', MEMBER_ROLES, true) ? $m['role'] : 'team';
         $byRole[$r][] = $m;
     }
-    $accountUser = member_account_username();
+    $accounts = load_accounts();
+    $accountsByMemberId = [];
+    foreach ($accounts as $acc) {
+        $accountsByMemberId[$acc['memberId']] = $acc;
+    }
 ?>
     <main>
         <h1 class="page-title">Administration</h1>
-        <p class="intro">Mitglieder (angezeigte Personen) verwalten und den geteilten Mitglied-Login setzen. Änderungen an Mitgliedern erscheinen sofort auf der öffentlichen Website.</p>
+        <p class="intro">Mitglieder (angezeigte Personen) mit individuellem E-Mail-Login verwalten. Änderungen an Mitgliedern erscheinen sofort auf der öffentlichen Website &ndash; allerdings nur für Mitglieder, die der Anzeige zugestimmt haben.</p>
 
         <?php if ($flash !== ''): ?>
             <div class="flash <?= h($flashType) ?>"><?= h($flash) ?></div>
@@ -222,13 +230,18 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                 <p><a href="#mitglieder-bereich">Mitglieder verwalten &rarr;</a></p>
             </div>
             <div class="card">
-                <h2>Mitglied-Login</h2>
-                <p>Der EINE geteilte Zugang für den Mitgliederbereich (<code>mobout.de/mitglieder/</code>) &ndash; Benutzername und Passwort setzen.</p>
-                <p><a href="#account-bereich">Login verwalten &rarr;</a></p>
+                <h2>Zustimmungs-Übersicht</h2>
+                <p>Wer hat der öffentlichen Anzeige zugestimmt, wer noch nicht &ndash; inklusive Datum und Quelle (selbst oder Bestands-Zustimmung).</p>
+                <p><a href="#zustimmungen-bereich">Zustimmungen ansehen &rarr;</a></p>
+            </div>
+            <div class="card">
+                <h2>E-Mail-Templates</h2>
+                <p>Betreff und Text der automatisch versendeten Mails (Willkommen, Einmalpasswort, Passwort geändert, Zustimmungs-Info) bearbeiten.</p>
+                <p><a href="#email-templates-bereich">Templates bearbeiten &rarr;</a></p>
             </div>
             <div class="card">
                 <h2>Datenübertragung</h2>
-                <p>Nachricht des Tages, Mitglieder und Expeditionen als ZIP-Bundle exportieren oder importieren &ndash; für Backup, Staging-Production-Übertragung und Migrationen.</p>
+                <p>Alle dynamischen Daten (MOTD, Mitglieder, Expeditionen, Accounts, Templates, Zustimmungs-Audit) als ZIP-Bundle exportieren oder importieren &ndash; für Backup, Staging-Production-Übertragung und Migrationen.</p>
                 <p><a href="#data-bereich">Daten übertragen &rarr;</a></p>
             </div>
         </div>
@@ -245,6 +258,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                     <input type="hidden" name="action" value="create">
                     <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
                     <label>Anzeigename<input type="text" name="name" required></label>
+                    <label>E-Mail (optional &ndash; legt bei Angabe einen Login-Account an und verschickt die Willkommensmail)<input type="email" name="email" placeholder="name@example.com"></label>
                     <label>Rolle
                         <select name="role">
                             <?php foreach (ROLE_LABELS as $key => $label): ?>
@@ -264,8 +278,26 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                 <div class="role-group">
                     <h3><?= h($roleLabel) ?> (<?= count($byRole[$roleKey]) ?>)</h3>
                     <?php foreach ($byRole[$roleKey] as $m): ?>
+                        <?php $mAcc = $accountsByMemberId[$m['id']] ?? null; ?>
                         <details class="member-entry">
                             <summary><?= h($m['name']) ?><span class="role-badge"><?= h(ROLE_LABELS[$m['role']] ?? $m['role']) ?></span></summary>
+
+                            <p class="hint" style="margin-top:0;">
+                                E-Mail: <strong><?= $mAcc ? h($mAcc['email']) : '&mdash; kein Account'; ?></strong>
+                                <?php if ($mAcc): ?> &middot; <?= !empty($mAcc['emailVerified']) ? 'verifiziert' : 'nicht verifiziert' ?><?php endif; ?>
+                                &middot; Anzeige:
+                                <?php if (!empty($m['consentGiven'])): ?>
+                                    zugestimmt (<?= h((string) ($m['consentSource'] ?? '')) ?><?php if (!empty($m['consentAt'])): ?>, <?= h((string) $m['consentAt']) ?><?php endif; ?>)
+                                <?php else: ?>
+                                    noch keine Zustimmung
+                                    <form method="post" action="members-save.php" style="display:inline;margin:0;" onsubmit="return confirm('Zustimmung stellvertretend für <?= h(addslashes($m['name'])) ?> erteilen?');">
+                                        <input type="hidden" name="action" value="grant-consent">
+                                        <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
+                                        <input type="hidden" name="id" value="<?= h($m['id']) ?>">
+                                        <button type="submit" style="margin:0 0 0 0.5rem;width:auto;display:inline-block;padding:0.2rem 0.6rem;font-size:0.85rem;">Bestands-Zustimmung erteilen</button>
+                                    </form>
+                                <?php endif; ?>
+                            </p>
 
                             <?php if (!empty($m['image'])): ?>
                                 <div class="member-photo">
@@ -284,6 +316,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                                 <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
                                 <input type="hidden" name="id" value="<?= h($m['id']) ?>">
                                 <label>Anzeigename<input type="text" name="name" value="<?= h($m['name']) ?>" required></label>
+                                <label>E-Mail (optional &ndash; leer lassen, um die bestehende Adresse zu behalten)<input type="email" name="email" value="<?= $mAcc ? h($mAcc['email']) : '' ?>" placeholder="name@example.com"></label>
                                 <label>Rolle
                                     <select name="role">
                                         <?php foreach (ROLE_LABELS as $key => $label): ?>
@@ -313,16 +346,62 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
             <?php endforeach; ?>
         </section>
 
-        <!-- Mitglied-Login (Basic Auth) -->
-        <section class="panel" id="account-bereich">
-            <h2>Mitglied-Login</h2>
-            <p class="hint">Der EINE geteilte Zugang für den Mitgliederbereich (<code>mobout.de/mitglieder/</code>) – für alle Mobout-Teilnehmer gleich. Änderungen kommuniziert ihr manuell weiter.</p>
-            <p class="current-account">Aktueller Benutzername: <strong><?= $accountUser !== '' ? h($accountUser) : '—' ?></strong></p>
-            <form method="post" action="account-save.php">
+        <!-- Zustimmungs-Uebersicht: schafft Transparenz ueber alle Zustimmungen, die
+             sonst nur im Postfach (Audit-Mail) und in einzelnen Server-Dateien
+             (consent-log/) sichtbar waeren. -->
+        <section class="panel" id="zustimmungen-bereich">
+            <h2>Zustimmungs-Übersicht</h2>
+            <p class="hint">Wer hat der öffentlichen Anzeige zugestimmt (Quelle „self" = selbst, „admin" = Bestands-Zustimmung), wer noch nicht. Nur zustimmende Mitglieder erscheinen auf mobout.de.</p>
+            <table class="consent-table">
+                <thead>
+                    <tr><th>Name</th><th>E-Mail</th><th>E-Mail verifiziert</th><th>Zustimmung</th><th>Datum</th><th>Quelle</th><th></th></tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($members as $m): ?>
+                        <?php $mAcc = $accountsByMemberId[$m['id']] ?? null; ?>
+                        <tr>
+                            <td><?= h($m['name']) ?></td>
+                            <td><?= $mAcc ? h($mAcc['email']) : '—' ?></td>
+                            <td><?= $mAcc ? (!empty($mAcc['emailVerified']) ? 'ja' : 'nein') : '—' ?></td>
+                            <td><?= !empty($m['consentGiven']) ? 'erteilt' : 'nicht erteilt' ?></td>
+                            <td><?= !empty($m['consentAt']) ? h((string) $m['consentAt']) : '—' ?></td>
+                            <td><?= !empty($m['consentSource']) ? h((string) $m['consentSource']) : '—' ?></td>
+                            <td>
+                                <?php if (empty($m['consentGiven'])): ?>
+                                    <form method="post" action="members-save.php" style="margin:0;" onsubmit="return confirm('Zustimmung stellvertretend für <?= h(addslashes($m['name'])) ?> erteilen?');">
+                                        <input type="hidden" name="action" value="grant-consent">
+                                        <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
+                                        <input type="hidden" name="id" value="<?= h($m['id']) ?>">
+                                        <button type="submit" style="margin:0;width:auto;padding:0.2rem 0.6rem;font-size:0.85rem;">Zustimmung erteilen</button>
+                                    </form>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($members)): ?>
+                        <tr><td colspan="7" class="hint">Noch keine Mitglieder angelegt.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- E-Mail-Templates: Betreff + Text der automatisch versendeten Mails -->
+        <section class="panel" id="email-templates-bereich">
+            <h2>E-Mail-Templates</h2>
+            <p class="hint">Betreff und Text der automatisch versendeten Mails. Platzhalter im Format <code>{{PLATZHALTER}}</code> werden beim Versand ersetzt &ndash; nur die jeweils darunter aufgeführten sind für dieses Template gültig.</p>
+            <form method="post" action="email-templates-save.php">
                 <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
-                <label>Neuer Benutzername<input type="text" name="username" value="<?= h($accountUser) ?>" required></label>
-                <label>Neues Passwort (min. 6 Zeichen)<input type="password" name="password" autocomplete="new-password" required></label>
-                <button type="submit">Mitglied-Login speichern</button>
+                <?php $emailTemplates = load_email_templates(); ?>
+                <?php foreach (email_template_defs() as $tplKey => $tplDef): ?>
+                    <details class="member-entry" open>
+                        <summary><?= h($tplDef['label']) ?></summary>
+                        <p class="hint" style="margin-top:0;"><?= h($tplDef['description']) ?></p>
+                        <label>Betreff<input type="text" name="templates[<?= h($tplKey) ?>][subject]" value="<?= h($emailTemplates[$tplKey]['subject'] ?? '') ?>" required></label>
+                        <label>Text<textarea name="templates[<?= h($tplKey) ?>][body]" rows="8"><?= h($emailTemplates[$tplKey]['body'] ?? '') ?></textarea></label>
+                        <p class="hint" style="margin-top:0;">Gültige Platzhalter: <?php foreach ($tplDef['placeholders'] as $ph): ?><code>{{<?= h($ph) ?>}}</code> <?php endforeach; ?></p>
+                    </details>
+                <?php endforeach; ?>
+                <button type="submit">Templates speichern</button>
             </form>
         </section>
 

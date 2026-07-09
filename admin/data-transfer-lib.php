@@ -11,6 +11,8 @@
 
 require_once __DIR__ . '/../mitglieder/members-lib.php';
 require_once __DIR__ . '/../mitglieder/expeditions-lib.php';
+require_once __DIR__ . '/../mitglieder/accounts-lib.php';
+require_once __DIR__ . '/../mitglieder/email-templates-lib.php';
 
 const DATA_TRANSFER_MANIFEST_VERSION = 1;
 const DATA_TRANSFER_MAX_ZIP_BYTES = 50 * 1024 * 1024;
@@ -276,6 +278,19 @@ function data_transfer_validate_expeditions(array $list): bool
     return true;
 }
 
+function data_transfer_validate_accounts(array $list): bool
+{
+    foreach ($list as $entry) {
+        if (!is_array($entry)
+            || !isset($entry['memberId'], $entry['email'])
+            || !is_string($entry['memberId']) || $entry['memberId'] === ''
+            || !is_string($entry['email'])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // --- Export je Modul: liefert JSON-Dateiinhalte + Quellpfade der zugehörigen Bilder.
 
 function data_transfer_export_motd(): array
@@ -328,6 +343,46 @@ function data_transfer_export_expeditions(): array
         'files' => ['expeditions/expeditions.json' => json_encode($list, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)],
         'images' => $images,
         'count' => count($list),
+    ];
+}
+
+function data_transfer_export_accounts(): array
+{
+    $list = load_accounts();
+    return [
+        'files' => ['accounts/accounts.json' => json_encode($list, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)],
+        'images' => [],
+        'count' => count($list),
+    ];
+}
+
+function data_transfer_export_email_templates(): array
+{
+    $data = load_email_templates();
+    return [
+        'files' => ['email-templates/email-templates.json' => json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)],
+        'images' => [],
+        'count' => count($data),
+    ];
+}
+
+// consent-log ist ein Ordner vieler kleiner JSON-Dateien statt einer zentralen Liste -
+// jede Datei wird als eigener Zip-Eintrag mitgenommen (wie Bilder bei anderen Modulen,
+// nur ohne Bild-Validierung).
+function data_transfer_export_consent_log(): array
+{
+    $images = [];
+    if (is_dir(CONSENT_LOG_DIR)) {
+        foreach (glob(CONSENT_LOG_DIR . '/*.json') ?: [] as $f) {
+            if (is_file($f)) {
+                $images['consent-log/' . basename($f)] = $f;
+            }
+        }
+    }
+    return [
+        'files' => [],
+        'images' => $images,
+        'count' => count($images),
     ];
 }
 
@@ -436,6 +491,81 @@ function data_transfer_import_expeditions(ZipArchive $zip): array
     return ['ok' => true, 'summary' => sprintf('Expeditionen importiert (%d Einträge, %d Bilder).', count($list), $imported)];
 }
 
+function data_transfer_import_accounts(ZipArchive $zip): array
+{
+    $idx = $zip->locateName('accounts/accounts.json');
+    if ($idx === false) {
+        return ['ok' => false, 'summary' => 'Accounts: Datei nicht im Archiv gefunden, übersprungen.'];
+    }
+    $json = $zip->getFromIndex($idx);
+    $list = $json !== false ? json_decode($json, true) : null;
+    if (!is_array($list) || !data_transfer_validate_accounts($list)) {
+        return ['ok' => false, 'summary' => 'Accounts: Datei ungültig, Import abgebrochen.'];
+    }
+
+    if (data_transfer_backup_file('accounts', ACCOUNTS_DATA_FILE)) {
+        data_transfer_prune_backups('accounts');
+    }
+
+    save_accounts($list);
+    return ['ok' => true, 'summary' => sprintf('Accounts importiert (%d Einträge).', count($list))];
+}
+
+function data_transfer_import_email_templates(ZipArchive $zip): array
+{
+    $idx = $zip->locateName('email-templates/email-templates.json');
+    if ($idx === false) {
+        return ['ok' => false, 'summary' => 'E-Mail-Templates: Datei nicht im Archiv gefunden, übersprungen.'];
+    }
+    $json = $zip->getFromIndex($idx);
+    $data = $json !== false ? json_decode($json, true) : null;
+    if (!is_array($data)) {
+        return ['ok' => false, 'summary' => 'E-Mail-Templates: Datei ungültig, Import abgebrochen.'];
+    }
+
+    if (data_transfer_backup_file('email-templates', EMAIL_TEMPLATES_DATA_FILE)) {
+        data_transfer_prune_backups('email-templates');
+    }
+
+    save_email_templates($data);
+    return ['ok' => true, 'summary' => 'E-Mail-Templates importiert.'];
+}
+
+// Bewusst ADDITIV statt vollständig ersetzend: das Audit-Log darf durch einen Import
+// keine bereits vorhandenen Nachweise verlieren. Vorhandene Dateien (gleicher
+// Dateiname) werden nicht überschrieben, nur fehlende ergänzt.
+function data_transfer_import_consent_log(ZipArchive $zip): array
+{
+    $imported = 0;
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $name = $zip->getNameIndex($i);
+        if ($name === false || !data_transfer_safe_zip_entry($name)) {
+            continue;
+        }
+        if (!str_starts_with($name, 'consent-log/') || !str_ends_with($name, '.json')) {
+            continue;
+        }
+        $filename = basename($name);
+        if ($filename === '') {
+            continue;
+        }
+        $target = CONSENT_LOG_DIR . '/' . $filename;
+        if (is_file($target)) {
+            continue;
+        }
+        $contents = $zip->getFromIndex($i);
+        if ($contents === false || json_decode($contents, true) === null) {
+            continue;
+        }
+        if (!is_dir(CONSENT_LOG_DIR)) {
+            mkdir(CONSENT_LOG_DIR, 0755, true);
+        }
+        file_put_contents($target, $contents, LOCK_EX);
+        $imported++;
+    }
+    return ['ok' => true, 'summary' => sprintf('Zustimmungs-Audit-Log: %d neue Einträge übernommen.', $imported)];
+}
+
 // --- Zentrale Registry.
 
 function data_transfer_modules(): array
@@ -455,6 +585,21 @@ function data_transfer_modules(): array
             'label' => 'Expeditionen',
             'export' => 'data_transfer_export_expeditions',
             'import' => 'data_transfer_import_expeditions',
+        ],
+        'accounts' => [
+            'label' => 'Accounts (Zugangsdaten, sensibel)',
+            'export' => 'data_transfer_export_accounts',
+            'import' => 'data_transfer_import_accounts',
+        ],
+        'email-templates' => [
+            'label' => 'E-Mail-Templates',
+            'export' => 'data_transfer_export_email_templates',
+            'import' => 'data_transfer_import_email_templates',
+        ],
+        'consent-log' => [
+            'label' => 'Zustimmungs-Audit-Log',
+            'export' => 'data_transfer_export_consent_log',
+            'import' => 'data_transfer_import_consent_log',
         ],
     ];
 }

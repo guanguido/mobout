@@ -10,14 +10,14 @@ if (($_GET['logout'] ?? '') === '1') {
     exit;
 }
 
-// Login-Versuch (geteilter Zugang, Enabler-Stufe)
+// Login-Versuch (individueller Account, E-Mail als Loginname)
 $memberLoginError = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {
-    if (member_attempt_login((string) ($_POST['username'] ?? ''), (string) ($_POST['password'] ?? ''))) {
+    if (member_attempt_login((string) ($_POST['email'] ?? ''), (string) ($_POST['password'] ?? ''))) {
         header('Location: index.php');
         exit;
     }
-    $memberLoginError = 'Benutzername oder Passwort falsch.';
+    $memberLoginError = 'E-Mail oder Passwort falsch.';
 }
 
 // Nicht eingeloggt -> kompakte Login-Seite ausgeben und beenden.
@@ -39,6 +39,13 @@ if (!member_is_logged_in()):
   button { width: 100%; padding: .7rem; background: #1a5276; color: #fff; border: 0; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
   button:hover { background: #154360; }
   .error { background: #fdecea; color: #b71c1c; padding: .6rem .7rem; border-radius: 6px; font-size: .9rem; margin-bottom: 1rem; }
+  .notice { background: #e8f4fd; color: #154360; padding: .6rem .7rem; border-radius: 6px; font-size: .85rem; margin-bottom: 1rem; }
+  .reset-details { margin-top: 1rem; font-size: .85rem; }
+  .reset-details summary { cursor: pointer; color: #1a5276; font-weight: 600; }
+  .reset-details form { margin-top: .8rem; }
+  .reset-details input[type=email] { width: 100%; padding: .5rem .6rem; margin-bottom: .6rem; border: 1px solid #cfd8dc; border-radius: 6px; box-sizing: border-box; font-size: .95rem; }
+  .reset-details button { width: 100%; padding: .55rem; background: #607d8b; color: #fff; border: 0; border-radius: 6px; font-size: .9rem; font-weight: 600; cursor: pointer; }
+  .reset-details button:hover { background: #546e7a; }
   .back { display: block; text-align: center; margin-top: 1.2rem; font-size: .85rem; color: #607d8b; text-decoration: none; }
   .back:hover { text-decoration: underline; }
 </style>
@@ -47,14 +54,23 @@ if (!member_is_logged_in()):
   <div class="login-card">
     <h1>Mitgliederbereich</h1>
     <?php if ($memberLoginError !== ''): ?><div class="error"><?= htmlspecialchars($memberLoginError) ?></div><?php endif; ?>
+    <?php if (($_GET['msg'] ?? '') === 'reset-requested'): ?><div class="notice">Falls die E-Mail-Adresse bei uns hinterlegt ist, wurde soeben ein Einmalpasswort verschickt.</div><?php endif; ?>
     <form method="post" action="index.php">
       <input type="hidden" name="action" value="login">
-      <label for="u">Benutzername</label>
-      <input type="text" id="u" name="username" autocomplete="username" autofocus required>
+      <label for="u">E-Mail-Adresse</label>
+      <input type="email" id="u" name="email" autocomplete="username" autofocus required>
       <label for="p">Passwort</label>
       <input type="password" id="p" name="password" autocomplete="current-password" required>
       <button type="submit">Anmelden</button>
     </form>
+    <details class="reset-details">
+      <summary>Passwort vergessen / Zugang einrichten</summary>
+      <form method="post" action="reset-request.php">
+        <label for="re">E-Mail-Adresse</label>
+        <input type="email" id="re" name="email" autocomplete="username" required>
+        <button type="submit">Einmalpasswort zusenden</button>
+      </form>
+    </details>
     <a class="back" href="/">&larr; Zurück zur öffentlichen Seite</a>
   </div>
 </body>
@@ -65,6 +81,60 @@ endif;
 
 // Ab hier ist der Besucher eingeloggt. CSRF-Token fuer die Formulare bereitstellen.
 $memberCsrf = member_csrf_token();
+$memberAccount = find_account_by_member_id(member_current_id());
+$memberMustChangePassword = !empty($memberAccount['mustChangePassword']);
+
+// Solange ein Passwortwechsel aussteht (z. B. direkt nach einem Einmalpasswort),
+// wird NUR das Passwort-Formular gezeigt - kein Redirect auf index.php selbst
+// (das wuerde eine Schleife erzeugen), sondern eine reduzierte Ansicht derselben Seite.
+if ($memberMustChangePassword):
+?>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Passwort aendern | Mitgliederbereich MobOut</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: #f4f6f8; color: #1a2733; margin: 0; display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
+  .login-card { background: #fff; padding: 2.5rem 2rem; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,.08); width: 100%; max-width: 380px; }
+  h1 { font-size: 1.3rem; margin: 0 0 .8rem; color: #1a5276; text-align: center; }
+  p.hint { font-size: .85rem; color: #607d8b; text-align: center; margin: 0 0 1.5rem; }
+  label { display: block; font-size: .85rem; font-weight: 600; margin: 0 0 .3rem; }
+  input[type=password] { width: 100%; padding: .6rem .7rem; margin-bottom: 1rem; border: 1px solid #cfd8dc; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+  button { width: 100%; padding: .7rem; background: #1a5276; color: #fff; border: 0; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+  button:hover { background: #154360; }
+  .error { background: #fdecea; color: #b71c1c; padding: .6rem .7rem; border-radius: 6px; font-size: .9rem; margin-bottom: 1rem; }
+  .back { display: block; text-align: center; margin-top: 1.2rem; font-size: .85rem; color: #607d8b; text-decoration: none; }
+  .back:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <div class="login-card">
+    <h1>Passwort festlegen</h1>
+    <p class="hint">Bevor es weitergeht, lege bitte dein eigenes Passwort fest (mindestens 8 Zeichen).</p>
+    <?php
+    $pwmsg = (string) ($_GET['pwmsg'] ?? '');
+    $pwErrors = ['current-wrong' => 'Aktuelles Passwort falsch.', 'too-short' => 'Neues Passwort muss mindestens 8 Zeichen haben.', 'mismatch' => 'Die beiden neuen Passwörter stimmen nicht überein.'];
+    if (isset($pwErrors[$pwmsg])): ?><div class="error"><?= htmlspecialchars($pwErrors[$pwmsg]) ?></div><?php endif; ?>
+    <form method="post" action="password-change.php">
+      <input type="hidden" name="csrf" value="<?= htmlspecialchars($memberCsrf) ?>">
+      <label for="cur">Aktuelles (Einmal-)Passwort</label>
+      <input type="password" id="cur" name="current" autocomplete="current-password" required>
+      <label for="n1">Neues Passwort</label>
+      <input type="password" id="n1" name="new" autocomplete="new-password" minlength="8" required>
+      <label for="n2">Neues Passwort (Wiederholung)</label>
+      <input type="password" id="n2" name="newRepeat" autocomplete="new-password" minlength="8" required>
+      <button type="submit">Passwort speichern</button>
+    </form>
+    <a class="back" href="index.php?logout=1">Abmelden</a>
+  </div>
+</body>
+</html>
+<?php
+exit;
+endif;
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -145,6 +215,9 @@ $memberCsrf = member_csrf_token();
         .account-info { display: grid; grid-template-columns: auto 1fr; gap: 0.35rem 0.75rem; }
         .account-info dt { color: var(--primary-color); font-weight: 600; }
         .account-info dd { color: #555; }
+        .form-msg { padding: .6rem .8rem; border-radius: 6px; font-size: .9rem; margin: 0 0 1rem; }
+        .form-msg-ok { background: #e8f6ea; color: #1e6b2e; }
+        .form-msg-err { background: #fdecea; color: #b71c1c; }
         .account-section h3 { color: var(--primary-color); font-size: 1.05rem; margin: 1.35rem 0 0.5rem; }
         .account-section ol { color: #555; margin: 0.25rem 0 0 1.2rem; padding: 0; }
         .account-section ol li { margin-bottom: 0.35rem; }
@@ -190,6 +263,7 @@ $memberCsrf = member_csrf_token();
             </div>
             <nav>
                 <a href="/">&larr; Zur Hauptseite</a>
+                <a href="index.php?logout=1">Abmelden</a>
             </nav>
         </div>
     </header>
@@ -220,6 +294,11 @@ $memberCsrf = member_csrf_token();
                 <h2>Nachricht des Tages</h2>
                 <p>Kurze Nachricht, die auf der öffentlichen Website im Kontaktbereich angezeigt wird, solange sie gesetzt ist.</p>
                 <p><a href="#motd-bereich">Nachricht bearbeiten &rarr;</a></p>
+            </div>
+            <div class="card">
+                <h2>Konto</h2>
+                <p>Dein Passwort ändern und der Anzeige deiner Daten auf der öffentlichen Website zustimmen.</p>
+                <p><a href="#konto-bereich">Konto verwalten &rarr;</a></p>
             </div>
         </div>
 
@@ -257,6 +336,59 @@ $memberCsrf = member_csrf_token();
             <p>Nein. Wenn du aus deinem <strong>eigenen</strong> Account postest und dort nur <code>@mobout.de</code> markierst oder <code>#mobout</code> verwendest, bleibt das Bild in <em>deinem</em> Account und erscheint <strong>nicht</strong> auf instagram.com/mobout.de bzw. der Website. <code>@</code> und <code>#</code> sind nur Verlinkung und Auffindbarkeit &ndash; sie kopieren nichts auf den geteilten Account. Damit ein Bild auf der Website landet, poste es (auch) aus dem geteilten Account. Doppeltes Posten ist völlig ok, du musst nichts &bdquo;verknüpfen&ldquo;.</p>
 
             <p><strong>Hinweis:</strong> Der Account ist aktuell auf <strong>privat</strong> gestellt. Besucher der Website sehen die Beiträge über den Link dann nur, wenn sie dem Account folgen und bestätigt sind. Soll alles öffentlich über die Website sichtbar sein, muss der Account in den Instagram-Einstellungen auf <em>öffentlich</em> umgestellt werden.</p>
+        </section>
+
+        <?php
+        require_once __DIR__ . '/members-lib.php';
+        $memberSelf = null;
+        foreach (load_members() as $m) {
+            if (($m['id'] ?? '') === member_current_id()) {
+                $memberSelf = $m;
+                break;
+            }
+        }
+        $pwmsg = (string) ($_GET['pwmsg'] ?? '');
+        $pwFeedback = [
+            'changed' => ['ok', 'Passwort wurde geändert.'],
+            'current-wrong' => ['err', 'Aktuelles Passwort falsch.'],
+            'too-short' => ['err', 'Neues Passwort muss mindestens 8 Zeichen haben.'],
+            'mismatch' => ['err', 'Die beiden neuen Passwörter stimmen nicht überein.'],
+        ][$pwmsg] ?? null;
+        $consentmsg = (string) ($_GET['consentmsg'] ?? '');
+        $consentFeedback = [
+            'granted' => ['ok', 'Danke! Deine Zustimmung wurde gespeichert.'],
+            'not-verified' => ['err', 'Deine E-Mail-Adresse muss zuerst verifiziert sein (einmal erfolgreich einloggen).'],
+            'error' => ['err', 'Zustimmung konnte nicht gespeichert werden.'],
+        ][$consentmsg] ?? null;
+        ?>
+        <section class="account-section" id="konto-bereich">
+            <h2>Konto</h2>
+            <dl class="account-info">
+                <dt>E-Mail</dt><dd><?= htmlspecialchars(member_current_email()) ?></dd>
+                <dt>Status</dt><dd><?= !empty($memberAccount['emailVerified']) ? 'E-Mail verifiziert' : 'E-Mail noch nicht verifiziert' ?></dd>
+            </dl>
+
+            <h3>Passwort ändern</h3>
+            <?php if ($pwFeedback): ?><p class="form-msg form-msg-<?= $pwFeedback[0] ?>"><?= htmlspecialchars($pwFeedback[1]) ?></p><?php endif; ?>
+            <form method="post" action="password-change.php">
+                <input type="hidden" name="csrf" value="<?= htmlspecialchars($memberCsrf) ?>">
+                <label>Aktuelles Passwort<br><input type="password" name="current" autocomplete="current-password" required></label><br>
+                <label>Neues Passwort<br><input type="password" name="new" autocomplete="new-password" minlength="8" required></label><br>
+                <label>Neues Passwort (Wiederholung)<br><input type="password" name="newRepeat" autocomplete="new-password" minlength="8" required></label><br>
+                <p><button type="submit">Passwort speichern</button></p>
+            </form>
+
+            <h3>Zustimmung zur Anzeige</h3>
+            <?php if ($consentFeedback): ?><p class="form-msg form-msg-<?= $consentFeedback[0] ?>"><?= htmlspecialchars($consentFeedback[1]) ?></p><?php endif; ?>
+            <?php if (!empty($memberSelf['consentGiven'])): ?>
+                <p>Du hast der Anzeige zugestimmt<?php if (!empty($memberSelf['consentAt'])): ?> am <?= htmlspecialchars((string) $memberSelf['consentAt']) ?><?php endif; ?>.</p>
+            <?php else: ?>
+                <p>Du wirst aktuell <strong>nicht</strong> auf der öffentlichen Website angezeigt. Erst mit deiner Zustimmung erscheinst du dort.</p>
+                <form method="post" action="consent-save.php">
+                    <input type="hidden" name="csrf" value="<?= htmlspecialchars($memberCsrf) ?>">
+                    <button type="submit" <?= empty($memberAccount['emailVerified']) ? 'disabled title="E-Mail muss zuerst verifiziert sein"' : '' ?>>Der Anzeige zustimmen</button>
+                </form>
+            <?php endif; ?>
         </section>
 
         <?php

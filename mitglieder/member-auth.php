@@ -1,14 +1,11 @@
 <?php
 // PHP-Session-Login für den Mitgliederbereich (mitglieder/). Ersetzt den früheren
-// Apache Basic Auth aus mitglieder/.htaccess. Der Schutz erfolgt jetzt pro Endpunkt
-// über eine PHP-Session (analog zum Admin-Bereich, admin/auth.php).
-//
-// Enabler-Stufe (Phase 0): Es gibt weiterhin nur EINEN geteilten Zugang. Die
-// Zugangsdaten werden aus der bestehenden data/.htpasswd (bcrypt) gelesen, nur die
-// Prüfung läuft jetzt über PHP statt über Apache. In der nächsten Ausbaustufe
-// (Phase 1) wird member_attempt_login() auf individuelle E-Mail-Accounts
-// (accounts.json) umgestellt; die übrigen Helfer bleiben unverändert.
+// Apache Basic Auth. Individuelle Mitglieder-Accounts (E-Mail als Loginname), siehe
+// accounts-lib.php. Löst die Enabler-Stufe (EIN geteilter Zugang aus data/.htpasswd)
+// ab.
 declare(strict_types=1);
+
+require_once __DIR__ . '/accounts-lib.php';
 
 // Erkennt, ob die aktuelle Anfrage wirklich über HTTPS läuft. Production läuft über
 // HTTPS (Secure-Cookies erzwungen), die Testumgebung (staging) bewusst über HTTP.
@@ -37,14 +34,10 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Aktive geteilte Zugangsdaten: data/.htpasswd (git-ignoriert, überlebt Deploys),
-// sonst der git-getrackte Seed mitglieder/.htpasswd.
-const MEMBER_HTPASSWD_DATA = __DIR__ . '/data/.htpasswd';
-const MEMBER_HTPASSWD_SEED = __DIR__ . '/.htpasswd';
-
 // Ohne Apache Basic Auth wäre mitglieder/data/ direkt per HTTP erreichbar. Wir legen
 // darum bei jedem Laden sicher, dass data/ existiert und ein .htaccess enthält, das
-// den direkten Web-Zugriff auf die serverseitigen Laufzeitdaten (Hashes, JSON) sperrt.
+// den direkten Web-Zugriff auf die serverseitigen Laufzeitdaten (accounts.json,
+// email-templates.json, consent-log/, ...) sperrt.
 function member_ensure_data_hardening(): void
 {
     $dir = __DIR__ . '/data';
@@ -57,24 +50,43 @@ function member_ensure_data_hardening(): void
     }
 }
 
-function member_htpasswd_line(): string
-{
-    $file = is_file(MEMBER_HTPASSWD_DATA) ? MEMBER_HTPASSWD_DATA : MEMBER_HTPASSWD_SEED;
-    if (!is_file($file)) {
-        return '';
-    }
-    return trim((string) @file_get_contents($file));
-}
-
 function member_is_logged_in(): bool
 {
     return !empty($_SESSION['member_authenticated']);
+}
+
+function member_current_id(): string
+{
+    return (string) ($_SESSION['member_id'] ?? '');
+}
+
+function member_current_email(): string
+{
+    return (string) ($_SESSION['member_email'] ?? '');
 }
 
 function require_member(): void
 {
     if (!member_is_logged_in()) {
         header('Location: index.php');
+        exit;
+    }
+}
+
+// Blockiert die Gruppeninhalte-Endpunkte (motd-save.php, expeditions-save.php) und
+// die Zustimmung (consent-save.php), solange das Konto ein mustChangePassword=true
+// trägt (z. B. direkt nach einem frisch ausgestellten Einmalpasswort). index.php
+// selbst ruft diese Funktion NICHT auf - dort wird stattdessen die Ansicht auf das
+// Passwort-Ändern-Formular reduziert (siehe Kommentar in index.php), sonst gäbe es
+// eine Redirect-Schleife auf sich selbst.
+function member_enforce_password_change(): void
+{
+    if (!member_is_logged_in()) {
+        return;
+    }
+    $acc = find_account_by_member_id(member_current_id());
+    if ($acc !== null && !empty($acc['mustChangePassword'])) {
+        header('Location: index.php#konto-bereich');
         exit;
     }
 }
@@ -96,25 +108,25 @@ function member_check_csrf(): void
     }
 }
 
-// Enabler-Stufe: Login gegen den EINEN geteilten Zugang aus der .htpasswd-Zeile
-// (Format username:bcrypt-hash). Zeitkonstanter Vergleich + password_verify.
-function member_attempt_login(string $user, string $pass): bool
+// Login per E-Mail + Passwort gegen den individuellen Account (accounts.json). Ein
+// erfolgreicher Login - egal ob mit einem regulären Passwort oder einem gerade per
+// Mail zugestellten Einmalpasswort - beweist, dass die Person die hinterlegte E-Mail
+// tatsächlich empfangen kann: die E-Mail gilt danach als verifiziert.
+function member_attempt_login(string $email, string $pass): bool
 {
-    $line = member_htpasswd_line();
-    $pos = strpos($line, ':');
-    if ($pos === false) {
+    $acc = find_account_by_email($email);
+    if ($acc === null || empty($acc['passwordHash']) || !password_verify($pass, (string) $acc['passwordHash'])) {
         return false;
     }
-    $storedUser = substr($line, 0, $pos);
-    $storedHash = substr($line, $pos + 1);
-    $userOk = $storedUser !== '' && hash_equals($storedUser, $user);
-    $passOk = $storedHash !== '' && password_verify($pass, $storedHash);
-    if ($userOk && $passOk) {
-        session_regenerate_id(true);
-        $_SESSION['member_authenticated'] = true;
-        return true;
+    $memberId = (string) $acc['memberId'];
+    session_regenerate_id(true);
+    $_SESSION['member_authenticated'] = true;
+    $_SESSION['member_id'] = $memberId;
+    $_SESSION['member_email'] = (string) $acc['email'];
+    if (empty($acc['emailVerified'])) {
+        mark_email_verified($memberId);
     }
-    return false;
+    return true;
 }
 
 function member_logout(): void

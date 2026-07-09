@@ -46,8 +46,8 @@ jobs:
             mitglieder \
             ${{ secrets.STRATO_USER }}@${{ secrets.STRATO_HOST }}:${{ steps.target.outputs.path }}
 
-          # Mitglied-Login deploy-sicher machen: aktive .htpasswd liegt in data/
-          # (git-ignoriert, überlebt rsync --delete). Einmalig aus dem git-getrackten
-          # Seed mitglieder/.htpasswd kopieren, falls noch keiner existiert.
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.STRATO_USER }}@${{ secrets.STRATO_HOST }} \
-            "cd '${{ steps.target.outputs.path }}mitglieder' && mkdir -p data && { test -f data/.htpasswd || cp .htpasswd data/.htpasswd; }"
+          # Kein Basic Auth mehr im Mitgliederbereich (individuelle Accounts statt
+          # geteiltem Login) - kein .htpasswd-Seed-Schritt noetig. accounts.json,
+          # email-templates.json, consent-log/ und die data/-Haertung entstehen zur
+          # Laufzeit (member_ensure_data_hardening() in mitglieder/member-auth.php)
+          # und sind ueber --exclude=data/ bereits deploy-sicher.

@@ -15,6 +15,18 @@ define('MEMBERS_SEED_IMAGES_DIR', __DIR__ . '/members-seed-images');
 // Erlaubte Rollen; bestimmen, in welcher Sektion die Person auf der Website erscheint.
 const MEMBER_ROLES = ['team', 'supporter', 'anwaerter'];
 
+// Normalisiert fehlende Consent-Felder (Altbestände vor der Zustimmungs-Funktion
+// hatten diese Felder nicht). Rückwärtskompatibel: alte 9-Feld-Datensätze bekommen
+// hier sichere Defaults, ohne dass ein Migrationsskript nötig wäre. Wird erst beim
+// nächsten save_members() tatsächlich persistiert.
+function normalize_member(array $entry): array
+{
+    $entry['consentGiven'] = (bool) ($entry['consentGiven'] ?? false);
+    $entry['consentAt'] = $entry['consentAt'] ?? null;
+    $entry['consentSource'] = $entry['consentSource'] ?? null; // 'self' | 'admin' | null
+    return $entry;
+}
+
 function load_members(): array
 {
     $file = is_file(MEMBERS_DATA_FILE) ? MEMBERS_DATA_FILE : MEMBERS_SEED_FILE;
@@ -22,7 +34,10 @@ function load_members(): array
         return [];
     }
     $list = json_decode(file_get_contents($file), true);
-    return is_array($list) ? $list : [];
+    if (!is_array($list)) {
+        return [];
+    }
+    return array_map('normalize_member', $list);
 }
 
 function save_members(array $list): void

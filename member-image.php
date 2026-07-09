@@ -5,6 +5,12 @@
 // zurück (git-getrackte Startfotos) - so werden Seed-Fotos auch ohne vorheriges
 // Speichern ausgeliefert, analog zum Seed-Fallback in load_members().
 // Strikter Pfad-Traversal-Schutz: basename()-Check + realpath()-Containment.
+//
+// Zusätzlich: nur Fotos von Mitgliedern mit erteilter Zustimmung (consentGiven)
+// werden ausgeliefert - sonst wäre das Foto einer nicht zustimmenden Person per
+// direkter URL trotzdem öffentlich abrufbar (Umgehung des Consent-Filters in
+// members.php).
+require __DIR__ . '/mitglieder/members-lib.php';
 
 $mimeByExtension = [
     'jpg' => 'image/jpeg',
@@ -15,6 +21,18 @@ $mimeByExtension = [
 
 $requested = (string) ($_GET['f'] ?? '');
 if ($requested === '' || basename($requested) !== $requested) {
+    http_response_code(404);
+    exit;
+}
+
+$consented = false;
+foreach (load_members() as $m) {
+    if ((string) ($m['image'] ?? '') === $requested) {
+        $consented = !empty($m['consentGiven']);
+        break;
+    }
+}
+if (!$consented) {
     http_response_code(404);
     exit;
 }
