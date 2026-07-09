@@ -28,11 +28,6 @@ jobs:
           BUILD_INFO="$SHORT_SHA | $BUILD_TS"
           sed -i "s#__BUILD_INFO__#$BUILD_INFO#g" index.html
 
-      - name: Inject member-area auth path
-        run: |
-          DEPLOY_PATH="${{ steps.target.outputs.path }}"
-          sed -i "s#__HTPASSWD_PATH__#${DEPLOY_PATH}mitglieder/data/.htpasswd#g" mitglieder/.htaccess
-
       - name: Deploy to Strato
         run: |
           mkdir -p ~/.ssh

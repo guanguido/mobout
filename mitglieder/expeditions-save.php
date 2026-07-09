@@ -6,6 +6,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+// Schutz früher über Apache Basic Auth, jetzt über die PHP-Session (member-auth.php).
+// Wichtig wegen der Datei-Uploads: CSRF-Token verpflichtend.
+require __DIR__ . '/member-auth.php';
+require_member();
+member_check_csrf();
+
 const MAX_IMAGES = 8;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'];

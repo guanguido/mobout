@@ -4,6 +4,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+// Schutz früher über Apache Basic Auth, jetzt über die PHP-Session (member-auth.php).
+require __DIR__ . '/member-auth.php';
+require_member();
+member_check_csrf();
+
 $text = trim(substr($_POST['motd'] ?? '', 0, 500));
 $dataDir = __DIR__ . '/data';
 if (!is_dir($dataDir)) {

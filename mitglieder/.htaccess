@@ -1,4 +1,7 @@
-AuthType Basic
-AuthName "MobOut Mitgliederbereich"
-AuthUserFile __HTPASSWD_PATH__
-Require valid-user
+# Kein Apache Basic Auth mehr: Der Mitgliederbereich wird jetzt über einen
+# PHP-Session-Login geschützt (mitglieder/member-auth.php). Siehe CLAUDE.md.
+#
+# Direktzugriff per HTTP auf die serverseitigen Laufzeitdaten (data/: bcrypt-Hashes,
+# JSON, .htpasswd, Tokens) sperren. Zusätzlich liegt in data/ selbst ein
+# "Require all denied"-.htaccess (von member-auth.php zur Laufzeit erzeugt).
+RedirectMatch 403 ^.*/mitglieder/data/

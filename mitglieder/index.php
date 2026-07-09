@@ -1,3 +1,71 @@
+<?php
+// PHP-Session-Login-Gate fuer den Mitgliederbereich. Ersetzt den frueheren Apache
+// Basic Auth. Ohne gueltige Session wird nur die Login-Seite gezeigt.
+require __DIR__ . '/member-auth.php';
+
+// Logout
+if (($_GET['logout'] ?? '') === '1') {
+    member_logout();
+    header('Location: index.php');
+    exit;
+}
+
+// Login-Versuch (geteilter Zugang, Enabler-Stufe)
+$memberLoginError = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {
+    if (member_attempt_login((string) ($_POST['username'] ?? ''), (string) ($_POST['password'] ?? ''))) {
+        header('Location: index.php');
+        exit;
+    }
+    $memberLoginError = 'Benutzername oder Passwort falsch.';
+}
+
+// Nicht eingeloggt -> kompakte Login-Seite ausgeben und beenden.
+if (!member_is_logged_in()):
+?>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Anmelden | Mitgliederbereich MobOut</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: #f4f6f8; color: #1a2733; margin: 0; display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
+  .login-card { background: #fff; padding: 2.5rem 2rem; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,.08); width: 100%; max-width: 360px; }
+  h1 { font-size: 1.3rem; margin: 0 0 1.5rem; color: #1a5276; text-align: center; }
+  label { display: block; font-size: .85rem; font-weight: 600; margin: 0 0 .3rem; }
+  input[type=text], input[type=password] { width: 100%; padding: .6rem .7rem; margin-bottom: 1rem; border: 1px solid #cfd8dc; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+  button { width: 100%; padding: .7rem; background: #1a5276; color: #fff; border: 0; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+  button:hover { background: #154360; }
+  .error { background: #fdecea; color: #b71c1c; padding: .6rem .7rem; border-radius: 6px; font-size: .9rem; margin-bottom: 1rem; }
+  .back { display: block; text-align: center; margin-top: 1.2rem; font-size: .85rem; color: #607d8b; text-decoration: none; }
+  .back:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <div class="login-card">
+    <h1>Mitgliederbereich</h1>
+    <?php if ($memberLoginError !== ''): ?><div class="error"><?= htmlspecialchars($memberLoginError) ?></div><?php endif; ?>
+    <form method="post" action="index.php">
+      <input type="hidden" name="action" value="login">
+      <label for="u">Benutzername</label>
+      <input type="text" id="u" name="username" autocomplete="username" autofocus required>
+      <label for="p">Passwort</label>
+      <input type="password" id="p" name="password" autocomplete="current-password" required>
+      <button type="submit">Anmelden</button>
+    </form>
+    <a class="back" href="/">&larr; Zurück zur öffentlichen Seite</a>
+  </div>
+</body>
+</html>
+<?php
+exit;
+endif;
+
+// Ab hier ist der Besucher eingeloggt. CSRF-Token fuer die Formulare bereitstellen.
+$memberCsrf = member_csrf_token();
+?>
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -199,6 +267,7 @@
             <h2>Nachricht des Tages</h2>
             <p>Wird auf der öffentlichen Website unter "Kontakt &amp; Informationen" angezeigt, solange das Feld nicht leer ist.</p>
             <form method="post" action="motd-save.php">
+                        <input type="hidden" name="csrf" value="<?= htmlspecialchars($memberCsrf) ?>">
                 <textarea name="motd" maxlength="500" rows="4" style="width:100%;"><?= htmlspecialchars($motdCurrent) ?></textarea>
                 <p><button type="submit">Speichern</button></p>
             </form>
@@ -223,6 +292,7 @@
                                 <div class="expedition-thumb">
                                     <img src="/expedition-image.php?f=<?= urlencode($image['filename']) ?>" alt="">
                                     <form method="post" action="expeditions-save.php" onsubmit="return confirm('Bild wirklich löschen?');">
+                        <input type="hidden" name="csrf" value="<?= htmlspecialchars($memberCsrf) ?>">
                                         <input type="hidden" name="action" value="delete-image">
                                         <input type="hidden" name="id" value="<?= htmlspecialchars($exp['id']) ?>">
                                         <input type="hidden" name="filename" value="<?= htmlspecialchars($image['filename']) ?>">
@@ -235,6 +305,7 @@
                     <p style="font-size:0.85rem; color:#777;"><?= count($exp['images']) ?>/8 Bilder</p>
 
                     <form method="post" action="expeditions-save.php" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf" value="<?= htmlspecialchars($memberCsrf) ?>">
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="id" value="<?= htmlspecialchars($exp['id']) ?>">
                         <label>Jahr<br><input type="number" name="year" value="<?= htmlspecialchars((string) $exp['year']) ?>" required></label><br>
@@ -249,6 +320,7 @@
                     </form>
 
                     <form method="post" action="expeditions-save.php" onsubmit="return confirm('Diese Expedition wirklich vollständig löschen?');">
+                        <input type="hidden" name="csrf" value="<?= htmlspecialchars($memberCsrf) ?>">
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="id" value="<?= htmlspecialchars($exp['id']) ?>">
                         <button type="submit">Expedition löschen</button>
@@ -259,6 +331,7 @@
             <details class="expedition-entry">
                 <summary>Neue Expedition hinzufügen</summary>
                 <form method="post" action="expeditions-save.php" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf" value="<?= htmlspecialchars($memberCsrf) ?>">
                     <input type="hidden" name="action" value="create">
                     <label>Jahr<br><input type="number" name="year" required></label><br>
                     <label>Ort / Angelplatz<br><input type="text" name="location" style="width:100%;" required></label><br>
