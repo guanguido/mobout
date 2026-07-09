@@ -10,17 +10,31 @@
 // (accounts.json) umgestellt; die übrigen Helfer bleiben unverändert.
 declare(strict_types=1);
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+// Erkennt, ob die aktuelle Anfrage wirklich über HTTPS läuft. Production läuft über
+// HTTPS (Secure-Cookies erzwungen), die Testumgebung (staging) bewusst über HTTP.
+// Dort darf das Secure-Flag NICHT gesetzt sein, sonst verwirft der Browser das
+// Session-Cookie und der Login greift nicht. Ein gefälschtes X-Forwarded-Proto kann
+// das Cookie nur strenger (Secure) machen, nie unsicherer – kein Downgrade-Risiko.
+function member_request_is_https(): bool
+{
+    if (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') {
+        return true;
+    }
+    if (strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https') {
+        return true;
+    }
+    return (string) ($_SERVER['SERVER_PORT'] ?? '') === '443';
 }
 
-// Session-Cookies härten: nur HTTPS, kein JS-Zugriff, CSRF-Schutz (wie admin/auth.php).
-if (session_status() === PHP_SESSION_ACTIVE) {
+// Cookie-Parameter VOR session_start() setzen, damit sie schon für das erste
+// Session-Cookie greifen (nicht erst beim session_regenerate_id im Login).
+if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
-        'secure' => true,
+        'secure' => member_request_is_https(),
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
+    session_start();
 }
 
 // Aktive geteilte Zugangsdaten: data/.htpasswd (git-ignoriert, überlebt Deploys),

@@ -12,17 +12,32 @@ const ADMIN_USER = 'Admin';
 //   oder:  htpasswd -nbBC 12 x 'NEUES_PW'   (Teil nach dem ersten ':' verwenden)
 const ADMIN_PASS_HASH = '$2y$12$9wIVTo2Y9t6xNToGtEO.ke4NeKNZ5rDg5Bb25AH589h2ZJ457ujxu';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+// Erkennt echtes HTTPS. Production läuft über HTTPS (Secure-Cookies erzwungen), die
+// Testumgebung (staging) bewusst über HTTP – dort darf 'secure' nicht gesetzt sein,
+// sonst verwirft der Browser das Session-Cookie und der Admin-Login greift nicht.
+// Ein gefälschtes X-Forwarded-Proto kann das Cookie nur strenger machen (Secure),
+// nie unsicherer – kein Downgrade-Risiko für Production.
+function admin_request_is_https(): bool
+{
+    if (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') {
+        return true;
+    }
+    if (strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https') {
+        return true;
+    }
+    return (string) ($_SERVER['SERVER_PORT'] ?? '') === '443';
 }
 
-// Harden session cookies: HTTPS-only, no JavaScript access, CSRF protection
-if (session_status() === PHP_SESSION_ACTIVE) {
+// Cookie-Parameter VOR session_start() setzen, damit sie schon fürs erste
+// Session-Cookie greifen (nicht erst beim session_regenerate_id im Login).
+// 'secure' nur bei echtem HTTPS (Prod), damit der Login in der HTTP-Testumgebung greift.
+if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
-        'secure' => true,      // HTTPS only (blocks transmission over unencrypted HTTP)
+        'secure' => admin_request_is_https(),  // HTTPS: hart erzwungen; HTTP-Staging: aus
         'httponly' => true,    // No JavaScript access (prevents XSS-based session theft)
         'samesite' => 'Lax'    // CSRF protection (blocks cross-site request forgery)
     ]);
+    session_start();
 }
 
 function admin_is_logged_in(): bool
