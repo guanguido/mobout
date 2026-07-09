@@ -295,7 +295,7 @@ $memberRoleLabels = ['team' => 'Team', 'supporter' => 'Supporter / Auch dabei', 
             </div>
             <div class="card">
                 <h2>Instagram</h2>
-                <p>Geteilter MobOut-Account &ndash; Zugangsdaten und eine kurze Anleitung, wie du Bilder postest, die auch auf der Website erscheinen.</p>
+                <p>Geteilter MobOut-Account &ndash; Zugangsdaten und eine kurze Anleitung, wie du Bilder als Story postest und zu einem Highlight für die Website gruppierst.</p>
                 <p><a href="#instagram-bereich">Zugangsdaten &amp; Anleitung &rarr;</a></p>
             </div>
             <div class="card">
@@ -328,27 +328,33 @@ $memberRoleLabels = ['team' => 'Team', 'supporter' => 'Supporter / Auch dabei', 
 
         <section class="account-section" id="instagram-bereich">
             <h2>Instagram &ndash; Zugangsdaten &amp; Anleitung</h2>
-            <p>Geteilter MobOut-Account. Alles, was du <strong>aus diesem Account</strong> postest, erscheint automatisch auf der öffentlichen Website (Button &bdquo;Alle Stories auf Instagram&ldquo;).</p>
+            <p>Geteilter MobOut-Account. Alles, was du <strong>aus diesem Account</strong> postest, landet automatisch im Instagram-Archiv des Accounts und kann darüber auf der Website verlinkt werden.</p>
             <dl class="account-info">
                 <dt>Profil</dt><dd><a href="https://www.instagram.com/mobout.de" target="_blank" rel="noopener">instagram.com/mobout.de</a></dd>
                 <dt>Benutzername</dt><dd>mobout.de</dd>
                 <dt>Passwort</dt><dd>J$CMobout</dd>
                 <dt>E-Mail</dt><dd>info@mobout.de</dd>
                 <dt>Mobilnummer</dt><dd>+49 176 82003004</dd>
-                <dt>Privatsphäre</dt><dd>Privat</dd>
+                <dt>Privatsphäre</dt><dd>Öffentlich</dd>
             </dl>
 
-            <h3>So postest du</h3>
+            <h3>So postest du (Standard: Story &rarr; Highlight)</h3>
+            <p>Bilder werden bei MobOut standardmäßig <strong>nicht als Beitrag</strong>, sondern als <strong>Story</strong> gepostet und dann einem <strong>Highlight</strong> zugeordnet. Das Highlight ist der Container, den die Website per Link referenziert (Feld &bdquo;Instagram-Link&ldquo; bei einer Expedition).</p>
             <ol>
                 <li>Instagram-App öffnen und mit den obigen Zugangsdaten in <strong>@mobout.de</strong> einloggen. Wenn du schon einen eigenen Account nutzt: über &bdquo;Konto wechseln&ldquo; zu MobOut wechseln.</li>
-                <li>Foto ganz normal als <strong>Beitrag</strong> oder <strong>Story</strong> posten &ndash; als wäre es dein Account.</li>
-                <li>Fertig. Der Beitrag bzw. die Story ist über den Website-Link automatisch erreichbar.</li>
+                <li>Foto/Video als <strong>Story</strong> posten &ndash; das ist der Standardweg, nicht als Beitrag.</li>
+                <li>Story zu einem <strong>Highlight</strong> hinzufügen: passendes Highlight nutzen oder neu anlegen. Highlight-Name immer im Format <code>YYYY.MM ORT</code> (Jahr, Punkt, zweistelliger Monat, Leerzeichen, Ort/Angelplatz), z. B. <code>2026.07 Havel</code>. Der Name ist die einzige Zuordnung zur Expedition auf der Website &ndash; unbedingt exakt nach diesem Schema benennen.</li>
+                <li>Link zum Highlight kopieren (Format <code>https://www.instagram.com/stories/highlights/&lt;id&gt;/</code>) und bei der passenden Expedition im <a href="#expeditionen-bereich">Expeditionen-Bereich</a> als Instagram-Link eintragen.</li>
+                <li>Fertig &ndash; das Foto landet zusätzlich automatisch im Instagram-Archiv des Accounts, dafür ist nichts weiter zu tun.</li>
             </ol>
 
-            <h3>Ich habe schon einen eigenen Account &ndash; reicht das?</h3>
-            <p>Nein. Wenn du aus deinem <strong>eigenen</strong> Account postest und dort nur <code>@mobout.de</code> markierst oder <code>#mobout</code> verwendest, bleibt das Bild in <em>deinem</em> Account und erscheint <strong>nicht</strong> auf instagram.com/mobout.de bzw. der Website. <code>@</code> und <code>#</code> sind nur Verlinkung und Auffindbarkeit &ndash; sie kopieren nichts auf den geteilten Account. Damit ein Bild auf der Website landet, poste es (auch) aus dem geteilten Account. Doppeltes Posten ist völlig ok, du musst nichts &bdquo;verknüpfen&ldquo;.</p>
+            <h3>Warum wechselt die Reihenfolge der Highlights manchmal auf Instagram?</h3>
+            <p>Im Instagram-Profil selbst sortieren sich Highlights ausschließlich danach, wann zuletzt eine Story hinzugefügt wurde &ndash; das zuletzt bearbeitete Highlight steht ganz links, unabhängig vom Namen oder vom Datum der Fotos darin. Fügst du also nachträglich ein altes Foto in ein altes Highlight ein, rutscht es im Instagram-Profil nach vorn. <strong>Das betrifft nur die Ansicht in der Instagram-App</strong>: Auf der MobOut-Website werden Expeditionen unabhängig davon streng nach Jahr sortiert, du musst dir um die Reihenfolge auf der Website also keine Gedanken machen.</p>
 
-            <p><strong>Hinweis:</strong> Der Account ist aktuell auf <strong>privat</strong> gestellt. Besucher der Website sehen die Beiträge über den Link dann nur, wenn sie dem Account folgen und bestätigt sind. Soll alles öffentlich über die Website sichtbar sein, muss der Account in den Instagram-Einstellungen auf <em>öffentlich</em> umgestellt werden.</p>
+            <h3>Ich habe schon einen eigenen Account &ndash; reicht das?</h3>
+            <p>Nein. Wenn du aus deinem <strong>eigenen</strong> Account postest und dort nur <code>@mobout.de</code> markierst oder <code>#mobout</code> verwendest, bleibt die Story in <em>deinem</em> Account und erscheint <strong>nicht</strong> auf instagram.com/mobout.de bzw. der Website. <code>@</code> und <code>#</code> sind nur Verlinkung und Auffindbarkeit &ndash; sie kopieren nichts auf den geteilten Account. Damit ein Bild auf der Website landet, poste es (auch) aus dem geteilten Account.</p>
+
+            <p><strong>Hinweis:</strong> Der Account ist bewusst auf <strong>öffentlich</strong> gestellt, damit Highlights über den Website-Link für alle Besucher ohne Login/Follow sichtbar sind. Falls der Account doch mal auf privat steht: In der Instagram-App unter Einstellungen &rarr; Konto &rarr; Privatsphäre auf <em>öffentlich</em> umstellen.</p>
         </section>
 
         <?php
