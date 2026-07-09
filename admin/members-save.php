@@ -143,22 +143,26 @@ if ($action === 'update') {
 
     // E-Mail-Feld ist optional editierbar: legt bei erstmaliger Angabe den Account an
     // (+ Willkommensmail) oder aktualisiert eine bestehende Adresse (E-Mail muss dann
-    // erneut verifiziert werden, siehe update_account_email()).
+    // erneut verifiziert werden). In BEIDEN Fällen geht die Willkommensmail an die NEUE
+    // Adresse - sonst hätte das Mitglied nach einer Korrektur keinerlei Info, wie es an
+    // seinen Login kommt (Bug: bisher verschickte nur die Erstanlage eine Mail).
     if ($found && $emailToApply !== null) {
+        $memberName = $id;
+        foreach ($list as $e) {
+            if ($e['id'] === $id) {
+                $memberName = (string) $e['name'];
+                break;
+            }
+        }
         $existingAcc = find_account_by_member_id($id);
         if ($existingAcc === null) {
-            $memberName = '';
-            foreach ($list as $e) {
-                if ($e['id'] === $id) {
-                    $memberName = (string) $e['name'];
-                    break;
-                }
-            }
             if (create_account($id, $emailToApply)) {
                 send_welcome_mail($emailToApply, $memberName);
             }
         } elseif (strtolower((string) $existingAcc['email']) !== strtolower($emailToApply)) {
-            update_account_email($id, $emailToApply);
+            if (update_account_email($id, $emailToApply)) {
+                send_welcome_mail($emailToApply, $memberName);
+            }
         }
     }
 
