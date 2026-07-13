@@ -39,6 +39,7 @@ if ($new !== $newRepeat) {
 $mustChangeBefore = !empty($acc['mustChangePassword']);
 
 set_password(member_current_id(), $new);
+unset($_SESSION['member_pending_current_password']);
 
 require_once __DIR__ . '/members-lib.php';
 

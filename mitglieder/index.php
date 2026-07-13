@@ -10,17 +10,35 @@ if (($_GET['logout'] ?? '') === '1') {
     exit;
 }
 
+// Merkt sich das gerade erfolgreich verwendete Passwort (bzw. Einmalpasswort) fuer
+// EINEN Login-Vorgang zwischen, aber NUR wenn ein Passwortwechsel aussteht - so kann
+// das anschliessende Passwort-Formular (siehe unten) das Feld "Aktuelles Passwort"
+// vorbelegen, der Nutzer muss das (Einmal-)Passwort also nicht ein zweites Mal
+// eintippen. Ausserhalb des erzwungenen Wechsels wird nichts gespeichert, damit kein
+// dauerhaft gueltiges Passwort unnoetig in der Session liegt.
+function member_stash_pending_password(string $password): void
+{
+    $acc = find_account_by_member_id(member_current_id());
+    if (!empty($acc['mustChangePassword'])) {
+        $_SESSION['member_pending_current_password'] = $password;
+    }
+}
+
 // Login-Versuch (individueller Account, E-Mail als Loginname)
 $memberLoginError = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {
-    if (member_attempt_login((string) ($_POST['email'] ?? ''), (string) ($_POST['password'] ?? ''))) {
+    $memberLoginPassword = (string) ($_POST['password'] ?? '');
+    if (member_attempt_login((string) ($_POST['email'] ?? ''), $memberLoginPassword)) {
+        member_stash_pending_password($memberLoginPassword);
         header('Location: index.php');
         exit;
     }
     $memberLoginError = 'E-Mail oder Passwort falsch.';
 } elseif (!member_is_logged_in() && isset($_GET['email'], $_GET['otp'])) {
     // Magic-Link aus der OTP-Mail: Klick statt Copy/Paste des Einmalpassworts.
-    if (member_attempt_login((string) $_GET['email'], (string) $_GET['otp'])) {
+    $memberLoginPassword = (string) $_GET['otp'];
+    if (member_attempt_login((string) $_GET['email'], $memberLoginPassword)) {
+        member_stash_pending_password($memberLoginPassword);
         header('Location: index.php');
         exit;
     }
@@ -143,7 +161,7 @@ if ($memberMustChangePassword):
     <form method="post" action="password-change.php">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars($memberCsrf) ?>">
       <label for="cur">Aktuelles (Einmal-)Passwort</label>
-      <input type="password" id="cur" name="current" autocomplete="current-password" required>
+      <input type="password" id="cur" name="current" autocomplete="current-password" value="<?= htmlspecialchars((string) ($_SESSION['member_pending_current_password'] ?? '')) ?>" required>
       <label for="n1">Neues Passwort</label>
       <input type="password" id="n1" name="new" autocomplete="new-password" minlength="8" required>
       <label for="n2">Neues Passwort (Wiederholung)</label>

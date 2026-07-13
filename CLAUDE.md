@@ -182,7 +182,13 @@ Mechanismus.
   eine gefälschte Host-Kopfzeile in einer „Passwort vergessen"-Anfrage den Mail-Link samt gültigem OTP auf
   eine fremde Domain umleiten (Password-Reset-Poisoning). Ohne diese Umgebungs-Erkennung würde ein von
   Staging verschickter Magic-Link immer auf Production zeigen, wo der Account (accounts.json ist pro
-  Umgebung getrennt) gar nicht existiert.
+  Umgebung getrennt) gar nicht existiert. Nach erfolgreichem Login (Formular **oder** Magic-Link) wird
+  das gerade verwendete (Einmal-)Passwort zusätzlich für einen erzwungenen Passwortwechsel
+  zwischengespeichert (`$_SESSION['member_pending_current_password']`, gesetzt in `mitglieder/index.php`s
+  `member_stash_pending_password()`, nur wenn `mustChangePassword` noch aussteht) und füllt dort das Feld
+  „Aktuelles (Einmal-)Passwort" automatisch vor – der Nutzer muss das (Einmal-)Passwort dadurch nur einmal
+  angeben, nicht ein zweites Mal für den Wechsel selbst. `mitglieder/password-change.php` löscht den Wert
+  nach einem erfolgreichen Wechsel wieder aus der Session.
 - **Zustimmung:** `mitglieder/consent-save.php` erlaubt die Selbst-Zustimmung nur, wenn `emailVerified`
   **und** kein Passwortwechsel mehr aussteht. Schreibt zusätzlich eine unveränderliche JSON-Datei je
   Zustimmung unter `mitglieder/data/consent-log/` (Zeitpunkt **inhaltlich im JSON**, nicht als
