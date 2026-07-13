@@ -35,5 +35,5 @@ if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
     }
 }
 
-header('Location: index.php?msg=reset-requested');
+header('Location: index.php?msg=reset-requested&email=' . rawurlencode($email));
 exit;

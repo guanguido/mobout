@@ -18,7 +18,7 @@ function email_template_defs(): array
         'welcome' => [
             'label' => 'Mitglieder-Willkommens-E-Mail',
             'description' => 'Geht an ein neu angelegtes Mitglied mit E-Mail-Adresse (Empfänger: Mitglied).',
-            'placeholders' => ['NAME', 'EMAIL', 'MEMBER_AREA_URL'],
+            'placeholders' => ['NAME', 'EMAIL', 'MEMBER_AREA_URL', 'RESET_URL'],
         ],
         'otp' => [
             'label' => 'Passwort-Zurückgesetzt-E-Mail (Einmalpasswort)',

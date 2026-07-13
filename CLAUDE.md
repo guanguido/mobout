@@ -189,6 +189,20 @@ Mechanismus.
   „Aktuelles (Einmal-)Passwort" automatisch vor – der Nutzer muss das (Einmal-)Passwort dadurch nur einmal
   angeben, nicht ein zweites Mal für den Wechsel selbst. `mitglieder/password-change.php` löscht den Wert
   nach einem erfolgreichen Wechsel wieder aus der Session.
+- **Login-Seite antizipiert den Reset-Kontext:** `mitglieder/index.php` berechnet aus `$_GET['email']`
+  (Willkommens-Mail-Link, fehlgeschlagener OTP-Magic-Link oder Rücksprung von `reset-request.php`)
+  bzw. `$_GET['msg'] === 'reset-requested'` die Variablen `$memberEmailPrefill`/
+  `$shouldOpenResetDetails` – liegt eine E-Mail-Adresse in der URL vor, klappt der Abschnitt
+  „Passwort vergessen / Zugang einrichten" (natives `<details open>`) automatisch auf und beide
+  E-Mail-Felder (Login + Reset) sind vorbelegt, statt dass die Adresse ein weiteres Mal eingetippt
+  werden muss. `mitglieder/reset-request.php` gibt die eingegebene Adresse im Rücksprung
+  (`?msg=reset-requested&email=...`) mit zurück, damit dieser Zustand auch nach dem Absenden erhalten
+  bleibt. `send_welcome_mail()` nutzt denselben Mechanismus für den Platzhalter `{{RESET_URL}}`
+  (`member_area_url() . '?email=' . rawurlencode($email)`) – ein neu angelegtes Mitglied landet damit
+  direkt in einem aufgeklappten, vorbefüllten Formular. Wurde das `welcome`-Template auf einer
+  Umgebung bereits über die Admin-UI angepasst (Text liegt dann in der git-ignorierten
+  `mitglieder/data/email-templates.json` statt im Seed), übernimmt dieser Text `{{RESET_URL}}`
+  **nicht** automatisch – der Admin muss den Platzhalter dort selbst ergänzen.
 - **Zustimmung:** `mitglieder/consent-save.php` erlaubt die Selbst-Zustimmung nur, wenn `emailVerified`
   **und** kein Passwortwechsel mehr aussteht. Schreibt zusätzlich eine unveränderliche JSON-Datei je
   Zustimmung unter `mitglieder/data/consent-log/` (Zeitpunkt **inhaltlich im JSON**, nicht als
@@ -243,7 +257,7 @@ gleiches `data/`-Seed-Muster wie MOTD/Expeditionen.
   Templates + je eine Whitelist gültiger Platzhalter) und `render_email_template()` (ersetzt nur
   Platzhalter im Format `{{PLATZHALTER}}`, die für das jeweilige Template erlaubt sind).
 - **Die vier Templates:**
-  - `welcome` (an das Mitglied): `{{NAME}}`, `{{EMAIL}}`, `{{MEMBER_AREA_URL}}`
+  - `welcome` (an das Mitglied): `{{NAME}}`, `{{EMAIL}}`, `{{MEMBER_AREA_URL}}`, `{{RESET_URL}}`
   - `otp` (an das Mitglied, Passwort-Zurückgesetzt-Mail): `{{NAME}}`, `{{ONETIMEPASSWORD}}`,
     `{{MEMBER_AREA_URL}}`
   - `password-changed` (an das Mitglied): `{{NAME}}`, `{{CHANGE_DATE}}`, `{{MEMBER_AREA_URL}}`

@@ -229,10 +229,12 @@ function member_mail_send(string $to, string $toName, string $templateKey, array
 
 function send_welcome_mail(string $email, string $name): bool
 {
+    $resetUrl = member_area_url() . '?email=' . rawurlencode($email);
     return member_mail_send($email, $name, 'welcome', [
         'NAME' => $name,
         'EMAIL' => $email,
         'MEMBER_AREA_URL' => member_area_url(),
+        'RESET_URL' => $resetUrl,
     ]);
 }
 

@@ -1,7 +1,7 @@
 {
   "welcome": {
     "subject": "Willkommen im MobOut-Mitgliederbereich",
-    "body": "Hallo {{NAME}},\n\nschön, dass du dabei bist! Für dich wurde ein persönlicher Zugang zum MobOut-Mitgliederbereich angelegt.\n\nDein Login-Name ist deine E-Mail-Adresse: {{EMAIL}}\n\nSo richtest du dein Passwort ein:\n1. Öffne {{MEMBER_AREA_URL}}\n2. Klicke auf \"Passwort vergessen\" und gib deine E-Mail-Adresse ein.\n3. Du bekommst ein Einmalpasswort per Mail, mit dem du dich anmeldest.\n4. Danach legst du dein eigenes Passwort fest.\n\nPetri Heil und bis bald!\nDeine MobOut-Crew"
+    "body": "Hallo {{NAME}},\n\nschön, dass du dabei bist! Für dich wurde ein persönlicher Zugang zum MobOut-Mitgliederbereich angelegt.\n\nDein Login-Name ist deine E-Mail-Adresse: {{EMAIL}}\n\nSo richtest du dein Passwort ein:\n1. Öffne {{RESET_URL}}\n2. Deine E-Mail-Adresse ist dort schon eingetragen – klicke einfach auf \"Einmalpasswort zusenden\".\n3. Du bekommst ein Einmalpasswort per Mail, mit dem du dich anmeldest (oder klickst direkt den Link darin).\n4. Danach legst du dein eigenes Passwort fest.\n\nPetri Heil und bis bald!\nDeine MobOut-Crew"
   },
   "otp": {
     "subject": "Dein Einmalpasswort für den MobOut-Mitgliederbereich",

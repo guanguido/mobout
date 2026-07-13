@@ -26,6 +26,15 @@ function member_stash_pending_password(string $password): void
 
 // Login-Versuch (individueller Account, E-Mail als Loginname)
 $memberLoginError = '';
+
+// Kontext-Erkennung fuer die Login-Seite: liegt eine E-Mail-Adresse in der URL
+// (Willkommens-Mail-Link, fehlgeschlagener OTP-Magic-Link oder Ruecksprung nach
+// reset-request.php), antizipiert die Seite den Passwort-Reset-Kontext - der
+// Abschnitt "Passwort vergessen" klappt automatisch auf und die E-Mail-Felder
+// werden vorbelegt, statt dass die Adresse ein weiteres Mal eingetippt werden muss.
+$memberEmailPrefill = trim((string) ($_GET['email'] ?? ''));
+$shouldOpenResetDetails = $memberEmailPrefill !== '' || (($_GET['msg'] ?? '') === 'reset-requested');
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {
     $memberLoginPassword = (string) ($_POST['password'] ?? '');
     if (member_attempt_login((string) ($_POST['email'] ?? ''), $memberLoginPassword)) {
@@ -83,16 +92,16 @@ if (!member_is_logged_in()):
     <form method="post" action="index.php">
       <input type="hidden" name="action" value="login">
       <label for="u">E-Mail-Adresse</label>
-      <input type="email" id="u" name="email" autocomplete="username" autofocus required>
+      <input type="email" id="u" name="email" autocomplete="username" autofocus required value="<?= htmlspecialchars($memberEmailPrefill) ?>">
       <label for="p">Passwort</label>
       <input type="password" id="p" name="password" autocomplete="current-password" required>
       <button type="submit">Anmelden</button>
     </form>
-    <details class="reset-details">
+    <details class="reset-details"<?= $shouldOpenResetDetails ? ' open' : '' ?>>
       <summary>Passwort vergessen / Zugang einrichten</summary>
       <form method="post" action="reset-request.php">
         <label for="re">E-Mail-Adresse</label>
-        <input type="email" id="re" name="email" autocomplete="username" required>
+        <input type="email" id="re" name="email" autocomplete="username" required value="<?= htmlspecialchars($memberEmailPrefill) ?>">
         <button type="submit">Einmalpasswort zusenden</button>
       </form>
     </details>
