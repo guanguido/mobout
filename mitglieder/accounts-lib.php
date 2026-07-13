@@ -19,8 +19,23 @@ require_once __DIR__ . '/email-templates-lib.php';
 
 define('ACCOUNTS_DATA_FILE', __DIR__ . '/data/accounts.json');
 
-const MEMBER_AREA_URL = 'https://www.mobout.de/mitglieder/';
 const MOBOUT_INFO_EMAIL = 'info@mobout.de';
+
+// Basis-URL des Mitgliederbereichs für Mail-Links, abhängig vom aktuellen Host. Wichtig
+// für den Magic-Link (siehe send_otp_mail()): Accounts liegen pro Umgebung getrennt in
+// data/accounts.json, ein hart auf Production verlinkter Magic-Link von Staging aus
+// würde daher immer ins Leere laufen. Bewusst eine Whitelist statt den rohen
+// $_SERVER['HTTP_HOST'] zu übernehmen - sonst könnte eine gefälschte Host-Kopfzeile in
+// einer Passwort-vergessen-Anfrage einen Mail-Link auf eine fremde Domain umleiten
+// (Host-Header-Injection / Password-Reset-Poisoning), inklusive des gültigen OTP.
+function member_area_url(): string
+{
+    $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    if ($host === 'staging.mobout.de') {
+        return 'http://staging.mobout.de/mitglieder/';
+    }
+    return 'https://www.mobout.de/mitglieder/';
+}
 
 function load_accounts(): array
 {
@@ -217,18 +232,18 @@ function send_welcome_mail(string $email, string $name): bool
     return member_mail_send($email, $name, 'welcome', [
         'NAME' => $name,
         'EMAIL' => $email,
-        'MEMBER_AREA_URL' => MEMBER_AREA_URL,
+        'MEMBER_AREA_URL' => member_area_url(),
     ]);
 }
 
 function send_otp_mail(string $email, string $name, string $otp): bool
 {
-    $magicLink = MEMBER_AREA_URL . '?email=' . rawurlencode($email) . '&otp=' . rawurlencode($otp);
+    $magicLink = member_area_url() . '?email=' . rawurlencode($email) . '&otp=' . rawurlencode($otp);
     return member_mail_send($email, $name, 'otp', [
         'NAME' => $name,
         'ONETIMEPASSWORD' => $otp,
         'MAGIC_LINK' => $magicLink,
-        'MEMBER_AREA_URL' => MEMBER_AREA_URL,
+        'MEMBER_AREA_URL' => member_area_url(),
     ]);
 }
 
@@ -237,7 +252,7 @@ function send_password_changed_mail(string $email, string $name): bool
     return member_mail_send($email, $name, 'password-changed', [
         'NAME' => $name,
         'CHANGE_DATE' => date('d.m.Y H:i'),
-        'MEMBER_AREA_URL' => MEMBER_AREA_URL,
+        'MEMBER_AREA_URL' => member_area_url(),
     ]);
 }
 

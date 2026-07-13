@@ -170,12 +170,19 @@ Mechanismus.
   generische Antwort gegen User-Enumeration) ab. **Bewusst ohne Ablauf und ohne Rate-Limit**
   (Einfachheit vor Robustheit).
 - **Magic-Link statt Copy/Paste:** `send_otp_mail()` in `mitglieder/accounts-lib.php` baut zusätzlich
-  zum Klartext-OTP einen Link `MEMBER_AREA_URL?email=...&otp=...` (Template-Platzhalter
+  zum Klartext-OTP einen Link `member_area_url()?email=...&otp=...` (Template-Platzhalter
   `{{MAGIC_LINK}}`, Klartext-OTP als Fallback weiterhin über `{{ONETIMEPASSWORD}}`). Öffnet der Nutzer
   diesen Link, erkennt `mitglieder/index.php` die GET-Parameter `email`+`otp` und ruft automatisch
   `member_attempt_login()` auf – der Nutzer muss also nur klicken, nicht mehr kopieren/einfügen. Bekannter
   Trade-off: Ein E-Mail-Sicherheits-Scanner, der Links vorab abruft (z. B. Microsoft Safe Links), kann
   dadurch `emailVerified` vor dem echten Nutzer setzen – folgenlos, da das OTP ohnehin ohne Ablauf ist.
+  `member_area_url()` (ersetzt die frühere feste `MEMBER_AREA_URL`-Konstante) liefert je nach
+  `$_SERVER['HTTP_HOST']` die passende Umgebung – **Whitelist** (`staging.mobout.de` → HTTP-Staging-URL,
+  alles andere → Production-URL), bewusst **kein** ungeprüftes Übernehmen des Host-Headers, sonst könnte
+  eine gefälschte Host-Kopfzeile in einer „Passwort vergessen"-Anfrage den Mail-Link samt gültigem OTP auf
+  eine fremde Domain umleiten (Password-Reset-Poisoning). Ohne diese Umgebungs-Erkennung würde ein von
+  Staging verschickter Magic-Link immer auf Production zeigen, wo der Account (accounts.json ist pro
+  Umgebung getrennt) gar nicht existiert.
 - **Zustimmung:** `mitglieder/consent-save.php` erlaubt die Selbst-Zustimmung nur, wenn `emailVerified`
   **und** kein Passwortwechsel mehr aussteht. Schreibt zusätzlich eine unveränderliche JSON-Datei je
   Zustimmung unter `mitglieder/data/consent-log/` (Zeitpunkt **inhaltlich im JSON**, nicht als
