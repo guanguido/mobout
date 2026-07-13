@@ -32,17 +32,49 @@ if ($new !== $newRepeat) {
     password_change_fail('mismatch');
 }
 
+// Nur die erzwungene Erst-Anmeldung darf über die Checkbox unten Zustimmung
+// erteilen (nicht die freiwillige Passwort-Aenderung im Konto-Bereich, die kein
+// consent-Feld sendet) - Flag VOR set_password() sichern, da set_password()
+// mustChangePassword loescht.
+$mustChangeBefore = !empty($acc['mustChangePassword']);
+
 set_password(member_current_id(), $new);
 
 require_once __DIR__ . '/members-lib.php';
-$name = member_current_email();
-foreach (load_members() as $m) {
-    if (($m['id'] ?? '') === member_current_id()) {
-        $name = (string) ($m['name'] ?? $name);
-        break;
-    }
-}
-send_password_changed_mail(member_current_email(), $name);
 
-header('Location: index.php?pwmsg=changed#konto-bereich');
+$memberId = member_current_id();
+$email = member_current_email();
+$name = $email;
+$grantConsent = $mustChangeBefore && !empty($_POST['consent']) && !empty($acc['emailVerified']);
+$consentGranted = false;
+$now = date('c');
+
+$list = load_members();
+foreach ($list as &$m) {
+    if (($m['id'] ?? '') !== $memberId) {
+        continue;
+    }
+    $name = (string) ($m['name'] ?? $name);
+    if ($grantConsent) {
+        $m['consentGiven'] = true;
+        $m['consentAt'] = $now;
+        $m['consentSource'] = 'self';
+        $consentGranted = true;
+    }
+    break;
+}
+unset($m);
+
+if ($consentGranted) {
+    save_members($list);
+}
+
+send_password_changed_mail($email, $name);
+
+if ($consentGranted) {
+    write_consent_log($memberId, $name, $email, $now, 'self');
+    send_consent_notice_mail($name, $email, $now, 'self');
+}
+
+header('Location: index.php?pwmsg=changed' . ($consentGranted ? '&consentmsg=granted' : '') . '#konto-bereich');
 exit;

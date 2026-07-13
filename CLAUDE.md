@@ -173,8 +173,15 @@ Mechanismus.
   **und** kein Passwortwechsel mehr aussteht. Schreibt zusätzlich eine unveränderliche JSON-Datei je
   Zustimmung unter `mitglieder/data/consent-log/` (Zeitpunkt **inhaltlich im JSON**, nicht als
   Datei-mtime – die überlebt Kopieren/Backup/Transfer nicht zuverlässig) und verschickt eine
-  Info-/Audit-Mail an `info@mobout.de` (Template `consent-notice`). Der Admin kann stellvertretend
-  eine **Bestands-Zustimmung** setzen (`admin/members-save.php`, `action=grant-consent`,
+  Info-/Audit-Mail an `info@mobout.de` (Template `consent-notice`). Es gibt einen zweiten Einstieg für
+  dieselbe Selbst-Zustimmung: eine vorangehakte Checkbox direkt im reduzierten Formular von
+  `mitglieder/index.php`, das bei ausstehendem `mustChangePassword` (siehe „OTP = Passwort-Hash"
+  oben) statt der vollen Seite gezeigt wird. Die Zustimmung passiert dabei inline in
+  `mitglieder/password-change.php` (kein Redirect zu `consent-save.php`), aber mit identischer
+  Nebenwirkung (Audit-Log-Eintrag, Info-Mail, `consentSource='self'`). Wird die Checkbox abgewählt,
+  bleibt der bestehende Button „Der Anzeige zustimmen" im Konto-Bereich weiterhin verfügbar. Der
+  Admin kann stellvertretend eine **Bestands-Zustimmung** setzen (`admin/members-save.php`,
+  `action=grant-consent`,
   `consentSource=admin`) – z. B. für Mitglieder aus der Zeit vor den individuellen Accounts, damit
   die öffentliche Seite nicht leer ist. Beide Wege sind im Admin-Panel „Zustimmungs-Übersicht"
   (`#zustimmungen-bereich`) transparent einsehbar (sonst nur im Postfach bzw. in Server-Dateien sichtbar).

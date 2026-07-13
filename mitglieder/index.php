@@ -103,6 +103,8 @@ if ($memberMustChangePassword):
   p.hint { font-size: .85rem; color: #607d8b; text-align: center; margin: 0 0 1.5rem; }
   label { display: block; font-size: .85rem; font-weight: 600; margin: 0 0 .3rem; }
   input[type=password] { width: 100%; padding: .6rem .7rem; margin-bottom: 1rem; border: 1px solid #cfd8dc; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+  .checkbox-row { display: flex; align-items: flex-start; gap: .5rem; font-size: .8rem; font-weight: 400; margin: 0 0 1.2rem; cursor: pointer; }
+  .checkbox-row input[type=checkbox] { flex-shrink: 0; margin-top: .2rem; }
   button { width: 100%; padding: .7rem; background: #1a5276; color: #fff; border: 0; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
   button:hover { background: #154360; }
   .error { background: #fdecea; color: #b71c1c; padding: .6rem .7rem; border-radius: 6px; font-size: .9rem; margin-bottom: 1rem; }
@@ -126,6 +128,10 @@ if ($memberMustChangePassword):
       <input type="password" id="n1" name="new" autocomplete="new-password" minlength="8" required>
       <label for="n2">Neues Passwort (Wiederholung)</label>
       <input type="password" id="n2" name="newRepeat" autocomplete="new-password" minlength="8" required>
+      <label class="checkbox-row" for="consent">
+        <input type="checkbox" id="consent" name="consent" value="1" checked>
+        <span>Ich möchte mit Name und Profil auf mobout.de öffentlich angezeigt werden. (Kannst du später jederzeit im Konto-Bereich ändern.)</span>
+      </label>
       <button type="submit">Passwort speichern</button>
     </form>
     <a class="back" href="index.php?logout=1">Abmelden</a>
