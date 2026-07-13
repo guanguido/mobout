@@ -526,3 +526,25 @@ für beide Fälle funktionieren, siehe nächster Absatz.
 **Bewusste Einschränkung (Staging):** Auf staging.mobout.de laufen Logins unverschlüsselt (HTTP), da
 keine Produktivdaten/-passwörter dort dauerhaft schützenswert sind und die Testumgebung explizit ohne
 Zertifikat betrieben wird.
+
+## Bekannte Falle: „Secure"-Altcookie blockiert Login auf Staging (Browser-seitig)
+
+Wurde `staging.mobout.de` irgendwann versehentlich einmal über `https://` statt `http://` aufgerufen
+(z. B. durch Browser-Autovervollständigung, HTTPS-Zwang des Browsers oder eine weggeklickte
+Zertifikatswarnung), setzt PHP dabei korrekt ein `PHPSESSID`-Cookie mit `Secure`-Flag (siehe
+`admin_request_is_https()`/`member_request_is_https()` oben – die Erkennung war in diesem Moment
+technisch richtig, die Verbindung war ja wirklich HTTPS). Da Staging aber sonst nur über HTTP läuft,
+kann der Browser dieses alte `Secure`-Cookie bei allen folgenden HTTP-Logins nicht mehr durch das
+neue, korrekte (nicht-Secure) Cookie ersetzen – Browser verbieten grundsätzlich, ein `Secure`-Cookie
+von einer unverschlüsselten Verbindung aus zu überschreiben. Die Session bleibt dadurch dauerhaft
+leer: Login-Formular zeigt 302-Redirect, aber **keine** Fehlermeldung (weder „Passwort falsch" noch
+sonst etwas) und man landet einfach wieder auf dem leeren Formular – sieht wie ein stiller Bug aus,
+ist aber ein reines Browser-Cookie-Problem, kein Server-/Code-Fehler.
+
+**Erkennung:** Entwickler-Tools → Netzwerk-Tab beim Login-Versuch prüfen – Chrome/Firefox zeigen bei
+einer blockierten Cookie-Überschreibung eine explizite Warnung an der betroffenen Anfrage.
+
+**Fix (nur im betroffenen Browser nötig):** Cookies/Website-Daten für `staging.mobout.de` löschen
+(oder ein privates/Inkognito-Fenster nutzen) – danach wird das neue, nicht-Secure Cookie ohne
+Konflikt gesetzt und der Login funktioniert wieder normal. Betrifft gleichermaßen Admin- und
+Mitglieder-Login, da beide dasselbe Erkennungsmuster nutzen.
