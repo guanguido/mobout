@@ -18,6 +18,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login
         exit;
     }
     $memberLoginError = 'E-Mail oder Passwort falsch.';
+} elseif (!member_is_logged_in() && isset($_GET['email'], $_GET['otp'])) {
+    // Magic-Link aus der OTP-Mail: Klick statt Copy/Paste des Einmalpassworts.
+    if (member_attempt_login((string) $_GET['email'], (string) $_GET['otp'])) {
+        header('Location: index.php');
+        exit;
+    }
+    $memberLoginError = 'Der Link ist ungültig oder abgelaufen. Bitte melde dich mit E-Mail und Passwort an.';
 }
 
 // Nicht eingeloggt -> kompakte Login-Seite ausgeben und beenden.

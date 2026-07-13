@@ -223,9 +223,11 @@ function send_welcome_mail(string $email, string $name): bool
 
 function send_otp_mail(string $email, string $name, string $otp): bool
 {
+    $magicLink = MEMBER_AREA_URL . '?email=' . rawurlencode($email) . '&otp=' . rawurlencode($otp);
     return member_mail_send($email, $name, 'otp', [
         'NAME' => $name,
         'ONETIMEPASSWORD' => $otp,
+        'MAGIC_LINK' => $magicLink,
         'MEMBER_AREA_URL' => MEMBER_AREA_URL,
     ]);
 }

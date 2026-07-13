@@ -5,7 +5,7 @@
   },
   "otp": {
     "subject": "Dein Einmalpasswort für den MobOut-Mitgliederbereich",
-    "body": "Hallo {{NAME}},\n\ndu (oder jemand mit deiner E-Mail-Adresse) hat ein neues Passwort für den MobOut-Mitgliederbereich angefordert.\n\nDein Einmalpasswort lautet: {{ONETIMEPASSWORD}}\n\nDamit meldest du dich hier an: {{MEMBER_AREA_URL}}\nBitte ändere dein Passwort direkt nach der Anmeldung.\n\nWenn du das nicht angefordert hast, kannst du diese Mail einfach ignorieren.\n\nDeine MobOut-Crew"
+    "body": "Hallo {{NAME}},\n\ndu (oder jemand mit deiner E-Mail-Adresse) hat ein neues Passwort für den MobOut-Mitgliederbereich angefordert.\n\nKlicke auf diesen Link, um dich direkt anzumelden:\n{{MAGIC_LINK}}\n\nFalls der Link nicht funktioniert, kannst du dich auch manuell anmelden unter {{MEMBER_AREA_URL}} mit diesem Einmalpasswort: {{ONETIMEPASSWORD}}\nBitte ändere dein Passwort direkt nach der Anmeldung.\n\nWenn du das nicht angefordert hast, kannst du diese Mail einfach ignorieren.\n\nDeine MobOut-Crew"
   },
   "password-changed": {
     "subject": "Dein Passwort wurde geändert",

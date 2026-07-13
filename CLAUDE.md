@@ -29,9 +29,9 @@ mobout/
 │   ├── member-image.php # Admin-geschützte Foto-Vorschau (ohne Consent-Filter, im Unterschied zum öffentlichen member-image.php)
 │   └── help.php        # Admin-only Hilfeseite: Prozess Benutzeranlage, Bestands-Zustimmung, Templates, Anzeige-Regel, Audit, Datensicherung
 ├── mitglieder/         # Mitgliederbereich (PHP-Session-Login, individuelle E-Mail-Accounts)
-│   ├── index.php       # Eigenständige Seite (eigenes CSS, Logo als Base64); Login-Gate + Crew-Karten + persönliche Konto-Sektion (eigenes Profil, Passwort, Zustimmung), Begrüßung mit Mitgliedsnamen
+│   ├── index.php       # Eigenständige Seite (eigenes CSS, Logo als Base64); Login-Gate (inkl. Magic-Link-Auto-Login per E-Mail+OTP-Query-Parameter) + Crew-Karten + persönliche Konto-Sektion (eigenes Profil, Passwort, Zustimmung), Begrüßung mit Mitgliedsnamen
 │   ├── member-auth.php # Session-Auth (E-Mail-Login), CSRF-Helfer, erzwungener Passwortwechsel, data/-Härtung
-│   ├── accounts-lib.php # Lesen/Schreiben individueller Accounts (data/accounts.json), OTP-Ausgabe, Mail-Helfer
+│   ├── accounts-lib.php # Lesen/Schreiben individueller Accounts (data/accounts.json), OTP-Ausgabe inkl. Magic-Link, Mail-Helfer
 │   ├── email-templates-lib.php # Editierbare E-Mail-Templates (Registry + Rendering mit Platzhaltern)
 │   ├── email-templates-seed.json # Git-getrackte Default-Texte der vier E-Mail-Templates
 │   ├── reset-request.php # Öffentlich: "Passwort vergessen", stellt Einmalpasswort aus und verschickt es
@@ -169,6 +169,13 @@ Mechanismus.
   deckt Erst-Einrichtung **und** „Passwort vergessen" (`mitglieder/reset-request.php`, öffentlich,
   generische Antwort gegen User-Enumeration) ab. **Bewusst ohne Ablauf und ohne Rate-Limit**
   (Einfachheit vor Robustheit).
+- **Magic-Link statt Copy/Paste:** `send_otp_mail()` in `mitglieder/accounts-lib.php` baut zusätzlich
+  zum Klartext-OTP einen Link `MEMBER_AREA_URL?email=...&otp=...` (Template-Platzhalter
+  `{{MAGIC_LINK}}`, Klartext-OTP als Fallback weiterhin über `{{ONETIMEPASSWORD}}`). Öffnet der Nutzer
+  diesen Link, erkennt `mitglieder/index.php` die GET-Parameter `email`+`otp` und ruft automatisch
+  `member_attempt_login()` auf – der Nutzer muss also nur klicken, nicht mehr kopieren/einfügen. Bekannter
+  Trade-off: Ein E-Mail-Sicherheits-Scanner, der Links vorab abruft (z. B. Microsoft Safe Links), kann
+  dadurch `emailVerified` vor dem echten Nutzer setzen – folgenlos, da das OTP ohnehin ohne Ablauf ist.
 - **Zustimmung:** `mitglieder/consent-save.php` erlaubt die Selbst-Zustimmung nur, wenn `emailVerified`
   **und** kein Passwortwechsel mehr aussteht. Schreibt zusätzlich eine unveränderliche JSON-Datei je
   Zustimmung unter `mitglieder/data/consent-log/` (Zeitpunkt **inhaltlich im JSON**, nicht als

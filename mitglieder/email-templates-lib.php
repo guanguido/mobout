@@ -23,7 +23,7 @@ function email_template_defs(): array
         'otp' => [
             'label' => 'Passwort-Zurückgesetzt-E-Mail (Einmalpasswort)',
             'description' => 'Geht an das Mitglied bei „Passwort vergessen" – enthält das Einmalpasswort (Empfänger: Mitglied).',
-            'placeholders' => ['NAME', 'ONETIMEPASSWORD', 'MEMBER_AREA_URL'],
+            'placeholders' => ['NAME', 'ONETIMEPASSWORD', 'MAGIC_LINK', 'MEMBER_AREA_URL'],
         ],
         'password-changed' => [
             'label' => 'Passwort-Geändert-Info',
