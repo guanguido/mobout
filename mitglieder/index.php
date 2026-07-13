@@ -203,6 +203,10 @@ foreach (load_members() as $m) {
     }
 }
 $memberRoleLabels = ['team' => 'Team', 'supporter' => 'Supporter / Auch dabei', 'anwaerter' => 'Anwärter'];
+
+// Rollenbasierte Berechtigungen (Admin-konfigurierbar, siehe role-permissions-lib.php).
+require_once __DIR__ . '/role-permissions-lib.php';
+$memberRole = (string) ($memberSelf['role'] ?? '');
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -343,26 +347,34 @@ $memberRoleLabels = ['team' => 'Team', 'supporter' => 'Supporter / Auch dabei', 
 
     <main>
         <div class="cards">
+            <?php if (role_has_permission($memberRole, 'expeditions_edit')): ?>
             <div class="card">
                 <h2>Expeditionen</h2>
                 <p>Neue Ausflüge anlegen, bestehende bearbeiten oder Fotos aus Instagram hochladen &ndash; erscheint automatisch auf der öffentlichen Website.</p>
                 <p><a href="#expeditionen-bereich">Expeditionen verwalten &rarr;</a></p>
             </div>
+            <?php endif; ?>
+            <?php if (role_has_permission($memberRole, 'instagram_view')): ?>
             <div class="card">
                 <h2>Instagram</h2>
                 <p>Geteilter MobOut-Account &ndash; Zugangsdaten und eine kurze Anleitung, wie du Bilder als Story postest und zu einem Highlight für die Website gruppierst.</p>
                 <p><a href="#instagram-bereich">Zugangsdaten &amp; Anleitung &rarr;</a></p>
             </div>
+            <?php endif; ?>
+            <?php if (role_has_permission($memberRole, 'navionics_view')): ?>
             <div class="card">
                 <h2>Navionics Account</h2>
                 <p>Gemeinsamer Account für die Navionics-App (Boating HD) &ndash; zeigt Tiefenkarten und Bodenbeschaffenheit beim Angeln.</p>
                 <p><a href="#navionics-zugangsdaten">Zugangsdaten ansehen &rarr;</a></p>
             </div>
+            <?php endif; ?>
+            <?php if (role_has_permission($memberRole, 'motd_edit')): ?>
             <div class="card">
                 <h2>Nachricht des Tages</h2>
                 <p>Kurze Nachricht, die auf der öffentlichen Website im Kontaktbereich angezeigt wird, solange sie gesetzt ist.</p>
                 <p><a href="#motd-bereich">Nachricht bearbeiten &rarr;</a></p>
             </div>
+            <?php endif; ?>
             <div class="card">
                 <h2>Konto</h2>
                 <p>Dein Passwort ändern und der Anzeige deiner Daten auf der öffentlichen Website zustimmen.</p>
@@ -370,6 +382,7 @@ $memberRoleLabels = ['team' => 'Team', 'supporter' => 'Supporter / Auch dabei', 
             </div>
         </div>
 
+        <?php if (role_has_permission($memberRole, 'navionics_view')): ?>
         <section class="account-section" id="navionics-zugangsdaten">
             <h2>Navionics Zugangsdaten</h2>
             <dl class="account-info">
@@ -380,7 +393,9 @@ $memberRoleLabels = ['team' => 'Team', 'supporter' => 'Supporter / Auch dabei', 
                 <dt>Läuft ab</dt><dd>14.05.2027</dd>
             </dl>
         </section>
+        <?php endif; ?>
 
+        <?php if (role_has_permission($memberRole, 'instagram_view')): ?>
         <section class="account-section" id="instagram-bereich">
             <h2>Instagram &ndash; Zugangsdaten &amp; Anleitung</h2>
             <p>Geteilter MobOut-Account. Alles, was du <strong>aus diesem Account</strong> postest, landet automatisch im Instagram-Archiv des Accounts und kann darüber auf der Website verlinkt werden.</p>
@@ -411,6 +426,7 @@ $memberRoleLabels = ['team' => 'Team', 'supporter' => 'Supporter / Auch dabei', 
 
             <p><strong>Hinweis:</strong> Der Account ist bewusst auf <strong>öffentlich</strong> gestellt, damit Highlights über den Website-Link für alle Besucher ohne Login/Follow sichtbar sind. Falls der Account doch mal auf privat steht: In der Instagram-App unter Einstellungen &rarr; Konto &rarr; Privatsphäre auf <em>öffentlich</em> umstellen.</p>
         </section>
+        <?php endif; ?>
 
         <?php
         $profilemsg = (string) ($_GET['profilemsg'] ?? '');
@@ -479,6 +495,7 @@ $memberRoleLabels = ['team' => 'Team', 'supporter' => 'Supporter / Auch dabei', 
             <?php endif; ?>
         </section>
 
+        <?php if (role_has_permission($memberRole, 'motd_edit')): ?>
         <?php
         $motdFile = __DIR__ . '/data/motd.txt';
         $motdCurrent = is_file($motdFile) ? file_get_contents($motdFile) : '';
@@ -492,7 +509,9 @@ $memberRoleLabels = ['team' => 'Team', 'supporter' => 'Supporter / Auch dabei', 
                 <p><button type="submit">Speichern</button></p>
             </form>
         </section>
+        <?php endif; ?>
 
+        <?php if (role_has_permission($memberRole, 'expeditions_edit')): ?>
         <?php
         require __DIR__ . '/expeditions-lib.php';
         $expeditions = load_expeditions();
@@ -565,6 +584,7 @@ $memberRoleLabels = ['team' => 'Team', 'supporter' => 'Supporter / Auch dabei', 
                 </form>
             </details>
         </section>
+        <?php endif; ?>
 
         <a class="back-link" href="/">&larr; Zurück zur öffentlichen Seite</a>
     </main>

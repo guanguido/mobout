@@ -18,11 +18,12 @@ mobout/
 ├── members.php          # Öffentlicher Lese-Endpunkt für die Mitgliederliste als JSON (kein Basic Auth)
 ├── member-image.php     # Öffentlicher Bild-Streaming-Endpunkt für Mitglieder-Fotos (kein Basic Auth)
 ├── admin/               # Versteckter Admin-Bereich (eigene PHP-Session-Auth, NICHT Basic Auth)
-│   ├── index.php       # Login + Dashboard: Mitglieder-CRUD, Zustimmungs-Übersicht, E-Mail-Templates, Datenübertragung (Logo als Base64)
+│   ├── index.php       # Login + Dashboard: Mitglieder-CRUD, Zustimmungs-Übersicht, E-Mail-Templates, Berechtigungen, Datenübertragung (Logo als Base64)
 │   ├── auth.php        # Session-Auth, hardcodierter Admin (User "Admin" + bcrypt-Hash), CSRF-Helfer
 │   ├── members-save.php # CRUD-Schreib-Endpunkt für Mitglieder (action=create/update/delete/delete-image/grant-consent), legt bei E-Mail einen Account an
 │   ├── email-templates-save.php # Speichert Betreff/Text der editierbaren E-Mail-Templates
-│   ├── data-transfer-lib.php    # Modul-Registry für Export/Import der dynamischen data/-Inhalte (MOTD, Mitglieder, Expeditionen, Accounts, E-Mail-Templates, Zustimmungs-Audit-Log), Backup-Rotation
+│   ├── role-permissions-save.php # Speichert/setzt zurück die Berechtigungs-Matrix (Rolle x Recht)
+│   ├── data-transfer-lib.php    # Modul-Registry für Export/Import der dynamischen data/-Inhalte (MOTD, Mitglieder, Expeditionen, Accounts, E-Mail-Templates, Rollen-Berechtigungen, Zustimmungs-Audit-Log), Backup-Rotation
 │   ├── data-transfer-export.php # Baut ein ZIP-Bundle aller Module und liefert es als Download
 │   ├── data-transfer-import.php # Nimmt ein ZIP-Bundle entgegen, ersetzt ausgewählte Module vollständig (mit Backup)
 │   ├── data-transfer-backup-delete.php # Löscht eine einzelne Sicherung aus mitglieder/data/backups/
@@ -34,6 +35,8 @@ mobout/
 │   ├── accounts-lib.php # Lesen/Schreiben individueller Accounts (data/accounts.json), OTP-Ausgabe inkl. Magic-Link, Mail-Helfer
 │   ├── email-templates-lib.php # Editierbare E-Mail-Templates (Registry + Rendering mit Platzhaltern)
 │   ├── email-templates-seed.json # Git-getrackte Default-Texte der vier E-Mail-Templates
+│   ├── role-permissions-lib.php # Berechtigungs-Registry (Matrix Rolle x Recht), Seed-Fallback, Reset der gesamten Matrix
+│   ├── role-permissions-seed.json # Git-getrackte Default-Matrix (siehe Abschnitt "Rollen-Berechtigungen")
 │   ├── reset-request.php # Öffentlich: "Passwort vergessen", stellt Einmalpasswort aus und verschickt es
 │   ├── password-change.php # Passwort selbst ändern (verlangt aktuelles Passwort)
 │   ├── consent-save.php # Mitglied stimmt der öffentlichen Anzeige selbst zu (nur nach E-Mail-Verifizierung)
@@ -46,7 +49,7 @@ mobout/
 │   ├── members-lib.php       # Gemeinsame load/save-Funktionen für Mitglieder inkl. Seeding-Logik + Consent-Feld-Normalisierung
 │   ├── members-seed.json     # Git-getrackter Ausgangsbestand der 17 migrierten Mitglieder
 │   ├── members-seed-images/  # Git-getrackte Startfotos der Mitglieder (Fallback von member-image.php)
-│   ├── data/           # Nur serverseitig, git-ignoriert (motd.txt, expeditions.json, expeditions-images/, members.json, members-images/, accounts.json, email-templates.json, consent-log/, backups/) – überlebt Deploys; per .htaccess ("Require all denied") gegen Direktzugriff gesperrt
+│   ├── data/           # Nur serverseitig, git-ignoriert (motd.txt, expeditions.json, expeditions-images/, members.json, members-images/, accounts.json, email-templates.json, role-permissions.json, consent-log/, backups/) – überlebt Deploys; per .htaccess ("Require all denied") gegen Direktzugriff gesperrt
 │   └── .htaccess       # Sperrt Direktzugriff auf data/ (RedirectMatch 403); KEIN Basic Auth mehr
 ├── assets/
 │   ├── images/         # Originalfotos (Personenbilder, Logos)
@@ -67,7 +70,8 @@ mobout/
   `mitglieder/password-change.php`, `mitglieder/consent-save.php`, `mitglieder/motd-save.php`,
   `motd.php`, `contact.php`, `expeditions.php`, `expedition-image.php`,
   `mitglieder/expeditions-save.php`, `mitglieder/expeditions-lib.php`, `members.php`,
-  `member-image.php`, `mitglieder/members-lib.php` und `admin/*.php`, siehe eigene Abschnitte unten
+  `member-image.php`, `mitglieder/members-lib.php`, `mitglieder/role-permissions-lib.php` und
+  `admin/*.php`, siehe eigene Abschnitte unten
 
 ## Sprache
 
@@ -427,11 +431,75 @@ Mitglieder), solange `data/members.json` fehlt. Startfotos liegen git-getrackt i
   per DOM auf (`textContent`, nie `innerHTML`); Foto via `member-image.php`, sonst Gradient-Avatar mit
   `icon`-Text.
 
+## Rollen-Berechtigungen
+
+Admin-konfigurierbare Berechtigungs-Matrix (Rolle × Recht) für den Mitgliederbereich. Bis zu dieser
+Funktion hatte `role` (`MEMBER_ROLES` in `mitglieder/members-lib.php`) **keinerlei Wirkung** – jedes
+eingeloggte Mitglied konnte unabhängig von seiner Rolle MOTD/Expeditionen bearbeiten und die
+Navionics-/Instagram-Zugangsdaten sehen. Gleiches `data/`-Seed-Muster wie bei den E-Mail-Templates,
+nur als 2D-Matrix statt flacher Map.
+
+**Die 5 konfigurierbaren Rechte** (Registry `permission_defs()` in `mitglieder/role-permissions-lib.php`):
+
+| Recht                | Bedeutung |
+|-----------------------|-----------|
+| `motd_edit`           | Karte + Bereich "Nachricht des Tages" sehen und speichern |
+| `expeditions_edit`    | Karte + Bereich "Expeditionen" sehen, anlegen, bearbeiten, löschen |
+| `navionics_view`      | Karte + Bereich mit den Navionics-Zugangsdaten sehen |
+| `instagram_view`      | Karte + Bereich mit den Instagram-Zugangsdaten sehen |
+| `own_account_edit`    | Eigenes Passwort ändern, eigene Zustimmung erteilen, eigenes Profil bearbeiten |
+
+**Default-Konfiguration** (Seed `mitglieder/role-permissions-seed.json`, git-getrackt):
+
+| Recht                | team | supporter | anwaerter |
+|-----------------------|------|-----------|-----------|
+| `motd_edit`           | ✅   | ❌        | ❌        |
+| `expeditions_edit`    | ✅   | ❌        | ❌        |
+| `navionics_view`      | ✅   | ❌        | ❌        |
+| `instagram_view`      | ✅   | ✅        | ✅        |
+| `own_account_edit`    | ✅   | ✅        | ✅        |
+
+- **Datenmodell:** `mitglieder/data/role-permissions.json` (git-ignoriert, server-only), Struktur
+  `{ "<rolle>": { "<recht>": bool } }`. `load_role_permissions()` liefert für **jede** Rolle+Recht-Zelle
+  einzeln einen Wert – aus `data/`, sonst Seed, sonst `false` (sicherer, geschlossener Default statt
+  Fehler bei einer unbekannten Zelle – eine künftige neue Rolle bekäme so automatisch alle Rechte auf
+  `false`, bis der Admin sie explizit setzt, ganz ohne Migrationsskript, analog zu
+  `normalize_member()`).
+- **Gating im Mitgliederbereich:** `mitglieder/index.php` blendet die Karte **und** den zugehörigen
+  Bereich für MOTD, Expeditionen, Navionics und Instagram bei fehlendem Recht **komplett aus** (nicht
+  nur schreibgeschützt) – Lesen ist für MOTD/Expeditionen ohnehin bereits öffentlich über
+  `motd.php`/`expeditions.php` möglich. Die Karte **"Konto"** (`#konto-bereich`) bleibt bewusst
+  **immer sichtbar**, obwohl `own_account_edit` als Matrix-Eintrag existiert: Ein deaktiviertes
+  `own_account_edit` würde sonst den einzigen Ausweg aus einem erzwungenen Passwortwechsel
+  (`mustChangePassword` nach einem Einmalpasswort) verstecken und das Mitglied aussperren – nur die
+  Backend-Endpunkte prüfen das Recht.
+- **Backend-Durchsetzung:** `require_permission(string $permission)` (Hard-Exit mit HTTP 403, analog
+  `member_check_csrf()`s Stil) läuft zusätzlich zum bestehenden `require_member()`/CSRF-Dreiklang in
+  `mitglieder/motd-save.php` (`motd_edit`), `mitglieder/expeditions-save.php` (`expeditions_edit`)
+  sowie `mitglieder/password-change.php`, `mitglieder/consent-save.php`, `mitglieder/profile-save.php`
+  (je `own_account_edit`) – damit ein direkter POST an einen Endpunkt unter Umgehung der UI ebenfalls
+  blockiert wird.
+- **Admin-UI:** Panel „Berechtigungen" in `admin/index.php` (`#berechtigungen-bereich`) – Tabelle mit
+  Rechten als Zeilen und Rollen als Spalten, Checkboxen, ein Speichern-Button. **Nur ein einziger**
+  "Auf Standard zurücksetzen"-Button für die **gesamte** Matrix (anders als bei den E-Mail-Templates,
+  die pro Template einen eigenen Reset-Button haben) – da die Matrix eine zusammenhängende
+  Konfiguration ist, nicht mehrere unabhängige Texte. Speichert über
+  `admin/role-permissions-save.php`. `reset_role_permissions()` löscht dazu die komplette
+  Override-Datei (statt nur einen Eintrag zu entfernen wie `reset_email_template()`), sodass danach
+  wieder der Seed-Fallback für jede Zelle greift – inklusive künftiger Seed-Aktualisierungen im Code.
+- **Export/Import:** Modul `role-permissions` in `admin/data-transfer-lib.php`s
+  `data_transfer_modules()`-Registry, wie die übrigen Module vollständig ersetzend (mit
+  Backup-vorher).
+- **Vorsicht bei `own_account_edit = false`:** Deaktiviert der Admin dieses Recht für eine Rolle,
+  verlieren betroffene Mitglieder gleichzeitig Passwortänderung, Zustimmung und Profil-Bearbeitung –
+  inklusive des beschriebenen Auswegs aus einem erzwungenen Passwortwechsel. Da der Default für alle
+  Rollen `true` ist, ist das nur bei aktiver Fehlkonfiguration relevant.
+
 ## Datenübertragung (Admin)
 
 Alle dynamischen, git-ignorierten Datenbestände (MOTD, Mitglieder, Expeditionen, Accounts,
-E-Mail-Templates, Zustimmungs-Audit-Log – jeweils `mitglieder/data/...`, siehe oben) existieren pro
-Umgebung (production/staging) getrennt und entstehen
+E-Mail-Templates, Rollen-Berechtigungen, Zustimmungs-Audit-Log – jeweils `mitglieder/data/...`, siehe
+oben) existieren pro Umgebung (production/staging) getrennt und entstehen
 ausschließlich durch Nutzereingaben in der App, nicht durch Deploys. Damit sie sich trotzdem sichern,
 zwischen Umgebungen übertragen und für lokale Migrationen/Transformationen bearbeiten lassen, gibt es im
 Admin-Bereich ein Export/Import als ein ZIP-Bundle. **Drei Zwecke in einem Mechanismus:** Backup
@@ -449,7 +517,7 @@ abweichender Stände.
 
 - **Architektur:** `admin/data-transfer-lib.php` definiert eine zentrale Modul-Registry
   (`data_transfer_modules()`) mit den Modulen `motd`, `members`, `expeditions`, `accounts`,
-  `email-templates`, `consent-log`. Jedes Modul hat eine `export`- und eine `import`-Funktion;
+  `email-templates`, `role-permissions`, `consent-log`. Jedes Modul hat eine `export`- und eine `import`-Funktion;
   Export-/Import-Endpunkt sowie die Admin-UI iterieren generisch über die Registry (jedes Modul im
   UI einzeln per Checkbox wähl-/abwählbar). **Erweiterbar:** ein künftiger weiterer dynamischer
   Datentyp nach demselben `data/`-Prinzip wird durch zwei neue Funktionen plus einen weiteren
@@ -466,7 +534,8 @@ abweichender Stände.
   enthaltene Module) sowie je Modul der JSON-Datei und den referenzierten Bildern/Dateien
   (`members/members.json` + `members/images/...`, `expeditions/expeditions.json` +
   `expeditions/images/...`, `motd/motd.txt`, `accounts/accounts.json`,
-  `email-templates/email-templates.json`, `consent-log/<datei>.json` je Zustimmung).
+  `email-templates/email-templates.json`, `role-permissions/role-permissions.json`,
+  `consent-log/<datei>.json` je Zustimmung).
 - **Export:** `admin/data-transfer-export.php` (Session- + CSRF-geschützt) baut das ZIP aus allen
   Modulen und liefert es als Download (`mobout-data-<host>-<Zeitstempel>.zip`).
 - **Import:** `admin/data-transfer-import.php` (Session- + CSRF-geschützt) validiert das hochgeladene

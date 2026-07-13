@@ -8,6 +8,8 @@ declare(strict_types=1);
 require __DIR__ . '/member-auth.php';
 require_member();
 member_check_csrf();
+require __DIR__ . '/role-permissions-lib.php';
+require_permission('own_account_edit');
 
 $current = (string) ($_POST['current'] ?? '');
 $new = (string) ($_POST['new'] ?? '');

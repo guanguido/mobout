@@ -3,6 +3,7 @@ require __DIR__ . '/auth.php';
 require_once __DIR__ . '/../mitglieder/members-lib.php';
 require_once __DIR__ . '/../mitglieder/accounts-lib.php';
 require_once __DIR__ . '/../mitglieder/email-templates-lib.php';
+require_once __DIR__ . '/../mitglieder/role-permissions-lib.php';
 require_once __DIR__ . '/data-transfer-lib.php';
 
 // Logout
@@ -43,6 +44,8 @@ $msgMap = [
     'consent-granted' => 'Zustimmung gespeichert.',
     'templates-saved' => 'E-Mail-Templates gespeichert.',
     'template-reset' => 'Template auf Standard zurückgesetzt.',
+    'permissions-saved' => 'Berechtigungen gespeichert.',
+    'permissions-reset' => 'Berechtigungen auf Standard zurückgesetzt.',
     'error' => 'Aktion fehlgeschlagen – bitte Eingaben prüfen.',
     'export-error' => 'Export fehlgeschlagen.',
     'import-ok' => 'Import abgeschlossen.',
@@ -244,8 +247,13 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                 <p><a href="#email-templates-bereich">Templates bearbeiten &rarr;</a></p>
             </div>
             <div class="card">
+                <h2>Berechtigungen</h2>
+                <p>Festlegen, was Team, Supporter und Anwärter im Mitgliederbereich sehen und ändern dürfen (MOTD, Expeditionen, Navionics, Instagram, eigenes Konto).</p>
+                <p><a href="#berechtigungen-bereich">Berechtigungen verwalten &rarr;</a></p>
+            </div>
+            <div class="card">
                 <h2>Datenübertragung</h2>
-                <p>Alle dynamischen Daten (MOTD, Mitglieder, Expeditionen, Accounts, Templates, Zustimmungs-Audit) als ZIP-Bundle exportieren oder importieren &ndash; für Backup, Staging-Production-Übertragung und Migrationen.</p>
+                <p>Alle dynamischen Daten (MOTD, Mitglieder, Expeditionen, Accounts, Templates, Berechtigungen, Zustimmungs-Audit) als ZIP-Bundle exportieren oder importieren &ndash; für Backup, Staging-Production-Übertragung und Migrationen.</p>
                 <p><a href="#data-bereich">Daten übertragen &rarr;</a></p>
             </div>
         </div>
@@ -416,6 +424,46 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                     </details>
                 <?php endforeach; ?>
                 <button type="submit">Templates speichern</button>
+            </form>
+        </section>
+
+        <!-- Berechtigungen: Matrix Rolle x Recht fuer den Mitgliederbereich -->
+        <section class="panel" id="berechtigungen-bereich">
+            <h2>Berechtigungen</h2>
+            <p class="hint">Legt fest, was Team, Supporter und Anwärter im Mitgliederbereich sehen und ändern dürfen. Fehlt ein Recht, werden die zugehörige Karte und der Bereich im Mitgliederbereich für diese Rolle komplett ausgeblendet (nicht nur schreibgeschützt).</p>
+            <p class="hint"><strong>Auf Standard zurücksetzen:</strong> verwirft alle eigenen Anpassungen an der <strong>gesamten</strong> Matrix und stellt wieder die mitgelieferte Standard-Konfiguration her (anders als bei den E-Mail-Templates gibt es hier nur einen Reset-Knopf für alles, keinen pro Recht/Rolle).</p>
+            <form method="post" action="role-permissions-save.php">
+                <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
+                <?php $rolePermissions = load_role_permissions(); ?>
+                <table class="consent-table">
+                    <thead>
+                        <tr>
+                            <th>Recht</th>
+                            <?php foreach (ROLE_LABELS as $roleKey => $roleLabel): ?>
+                                <th><?= h($roleLabel) ?></th>
+                            <?php endforeach; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach (permission_defs() as $permKey => $permDef): ?>
+                            <tr>
+                                <td>
+                                    <strong><?= h($permDef['label']) ?></strong>
+                                    <p class="hint" style="margin:0.2rem 0 0;"><?= h($permDef['description']) ?></p>
+                                </td>
+                                <?php foreach (ROLE_LABELS as $roleKey => $roleLabel): ?>
+                                    <td>
+                                        <input type="checkbox" name="permissions[<?= h($roleKey) ?>][<?= h($permKey) ?>]" <?= !empty($rolePermissions[$roleKey][$permKey]) ? 'checked' : '' ?>>
+                                    </td>
+                                <?php endforeach; ?>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <p>
+                    <button type="submit">Berechtigungen speichern</button>
+                    <button type="submit" name="reset_permissions" value="1" formnovalidate class="danger" onclick="return confirm('Wirklich ALLE Berechtigungen auf die mitgelieferten Standardwerte zurücksetzen? Alle eigenen Anpassungen gehen dabei verloren.');">Alle auf Standard zurücksetzen</button>
+                </p>
             </form>
         </section>
 

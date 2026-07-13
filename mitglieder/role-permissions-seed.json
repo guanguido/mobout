@@ -1,0 +1,23 @@
+{
+    "team": {
+        "motd_edit": true,
+        "expeditions_edit": true,
+        "navionics_view": true,
+        "instagram_view": true,
+        "own_account_edit": true
+    },
+    "supporter": {
+        "motd_edit": false,
+        "expeditions_edit": false,
+        "navionics_view": false,
+        "instagram_view": true,
+        "own_account_edit": true
+    },
+    "anwaerter": {
+        "motd_edit": false,
+        "expeditions_edit": false,
+        "navionics_view": false,
+        "instagram_view": true,
+        "own_account_edit": true
+    }
+}

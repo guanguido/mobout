@@ -9,6 +9,8 @@ require __DIR__ . '/member-auth.php';
 require_member();
 member_check_csrf();
 member_enforce_password_change();
+require __DIR__ . '/role-permissions-lib.php';
+require_permission('motd_edit');
 
 $text = trim(substr($_POST['motd'] ?? '', 0, 500));
 $dataDir = __DIR__ . '/data';

@@ -13,6 +13,7 @@ require_once __DIR__ . '/../mitglieder/members-lib.php';
 require_once __DIR__ . '/../mitglieder/expeditions-lib.php';
 require_once __DIR__ . '/../mitglieder/accounts-lib.php';
 require_once __DIR__ . '/../mitglieder/email-templates-lib.php';
+require_once __DIR__ . '/../mitglieder/role-permissions-lib.php';
 
 const DATA_TRANSFER_MANIFEST_VERSION = 1;
 const DATA_TRANSFER_MAX_ZIP_BYTES = 50 * 1024 * 1024;
@@ -291,6 +292,26 @@ function data_transfer_validate_accounts(array $list): bool
     return true;
 }
 
+// Lockere Schema-Pruefung: pro bekannter Rolle (falls vorhanden) nur bool-artige
+// Werte fuer bekannte Rechte - analog zu data_transfer_validate_accounts().
+function data_transfer_validate_role_permissions(array $data): bool
+{
+    foreach (MEMBER_ROLES as $role) {
+        if (!isset($data[$role])) {
+            continue;
+        }
+        if (!is_array($data[$role])) {
+            return false;
+        }
+        foreach (permission_defs() as $perm => $def) {
+            if (isset($data[$role][$perm]) && !is_bool($data[$role][$perm])) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 // --- Export je Modul: liefert JSON-Dateiinhalte + Quellpfade der zugehörigen Bilder.
 
 function data_transfer_export_motd(): array
@@ -361,6 +382,16 @@ function data_transfer_export_email_templates(): array
     $data = load_email_templates();
     return [
         'files' => ['email-templates/email-templates.json' => json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)],
+        'images' => [],
+        'count' => count($data),
+    ];
+}
+
+function data_transfer_export_role_permissions(): array
+{
+    $data = load_role_permissions();
+    return [
+        'files' => ['role-permissions/role-permissions.json' => json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)],
         'images' => [],
         'count' => count($data),
     ];
@@ -531,6 +562,26 @@ function data_transfer_import_email_templates(ZipArchive $zip): array
     return ['ok' => true, 'summary' => 'E-Mail-Templates importiert.'];
 }
 
+function data_transfer_import_role_permissions(ZipArchive $zip): array
+{
+    $idx = $zip->locateName('role-permissions/role-permissions.json');
+    if ($idx === false) {
+        return ['ok' => false, 'summary' => 'Berechtigungen: Datei nicht im Archiv gefunden, übersprungen.'];
+    }
+    $json = $zip->getFromIndex($idx);
+    $data = $json !== false ? json_decode($json, true) : null;
+    if (!is_array($data) || !data_transfer_validate_role_permissions($data)) {
+        return ['ok' => false, 'summary' => 'Berechtigungen: Datei ungültig, Import abgebrochen.'];
+    }
+
+    if (data_transfer_backup_file('role-permissions', ROLE_PERMISSIONS_DATA_FILE)) {
+        data_transfer_prune_backups('role-permissions');
+    }
+
+    save_role_permissions($data);
+    return ['ok' => true, 'summary' => 'Berechtigungen importiert.'];
+}
+
 // Bewusst ADDITIV statt vollständig ersetzend: das Audit-Log darf durch einen Import
 // keine bereits vorhandenen Nachweise verlieren. Vorhandene Dateien (gleicher
 // Dateiname) werden nicht überschrieben, nur fehlende ergänzt.
@@ -595,6 +646,11 @@ function data_transfer_modules(): array
             'label' => 'E-Mail-Templates',
             'export' => 'data_transfer_export_email_templates',
             'import' => 'data_transfer_import_email_templates',
+        ],
+        'role-permissions' => [
+            'label' => 'Rollen-Berechtigungen',
+            'export' => 'data_transfer_export_role_permissions',
+            'import' => 'data_transfer_import_role_permissions',
         ],
         'consent-log' => [
             'label' => 'Zustimmungs-Audit-Log',

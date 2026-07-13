@@ -74,3 +74,18 @@ function unique_member_id(array $list, string $name): string
     }
     return $id;
 }
+
+// Liefert die Rolle des eingeloggten Mitglieds (fuer Berechtigungs-Checks in
+// role-permissions-lib.php). Setzt voraus, dass der Aufrufer bereits
+// member-auth.php geladen hat (member_current_id()) - wie schon heute bei jedem
+// bestehenden Aufrufer von load_members() im Mitgliederbereich der Fall.
+function member_current_role(): string
+{
+    $id = member_current_id();
+    foreach (load_members() as $m) {
+        if ((string) ($m['id'] ?? '') === $id) {
+            return (string) ($m['role'] ?? '');
+        }
+    }
+    return '';
+}

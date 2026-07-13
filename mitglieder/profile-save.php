@@ -11,6 +11,8 @@ require __DIR__ . '/member-auth.php';
 require_member();
 member_check_csrf();
 member_enforce_password_change();
+require __DIR__ . '/role-permissions-lib.php';
+require_permission('own_account_edit');
 
 require_once __DIR__ . '/members-lib.php';
 
