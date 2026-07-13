@@ -45,7 +45,7 @@ require_once __DIR__ . '/members-lib.php';
 $memberId = member_current_id();
 $email = member_current_email();
 $name = $email;
-$grantConsent = $mustChangeBefore && !empty($_POST['consent']) && !empty($acc['emailVerified']);
+$wantsConsent = $mustChangeBefore && !empty($_POST['consent']) && !empty($acc['emailVerified']);
 $consentGranted = false;
 $now = date('c');
 
@@ -55,7 +55,10 @@ foreach ($list as &$m) {
         continue;
     }
     $name = (string) ($m['name'] ?? $name);
-    if ($grantConsent) {
+    // Wer schon zugestimmt hat, wird bei einem spaeteren Passwort-Reset (z. B.
+    // "Passwort vergessen" bei einem bestehenden Mitglied) nicht erneut gefragt -
+    // sonst wuerde consentAt/Audit-Log/Mail unnoetig erneut ausgeloest.
+    if ($wantsConsent && empty($m['consentGiven'])) {
         $m['consentGiven'] = true;
         $m['consentAt'] = $now;
         $m['consentSource'] = 'self';

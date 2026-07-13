@@ -88,6 +88,19 @@ $memberMustChangePassword = !empty($memberAccount['mustChangePassword']);
 // wird NUR das Passwort-Formular gezeigt - kein Redirect auf index.php selbst
 // (das wuerde eine Schleife erzeugen), sondern eine reduzierte Ansicht derselben Seite.
 if ($memberMustChangePassword):
+    // Die Opt-in-Checkbox unten soll nur bei noch nicht getroffener Zustimmungs-
+    // Entscheidung erscheinen - sonst wuerde ein Mitglied, das laengst zugestimmt hat,
+    // bei jedem "Passwort vergessen" erneut gefragt und consentAt/Audit-Log/Mail
+    // wuerden unnoetig erneut ausgeloest (betrifft z. B. Nutzer, die ihr Passwort
+    // vergessen haben, nicht nur neu angelegte).
+    require_once __DIR__ . '/members-lib.php';
+    $memberAlreadyConsented = false;
+    foreach (load_members() as $m) {
+        if ((string) ($m['id'] ?? '') === member_current_id()) {
+            $memberAlreadyConsented = !empty($m['consentGiven']);
+            break;
+        }
+    }
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -128,10 +141,12 @@ if ($memberMustChangePassword):
       <input type="password" id="n1" name="new" autocomplete="new-password" minlength="8" required>
       <label for="n2">Neues Passwort (Wiederholung)</label>
       <input type="password" id="n2" name="newRepeat" autocomplete="new-password" minlength="8" required>
+      <?php if (!$memberAlreadyConsented): ?>
       <label class="checkbox-row" for="consent">
         <input type="checkbox" id="consent" name="consent" value="1" checked>
         <span>Ich möchte mit Name und Profil auf mobout.de öffentlich angezeigt werden. (Kannst du später jederzeit im Konto-Bereich ändern.)</span>
       </label>
+      <?php endif; ?>
       <button type="submit">Passwort speichern</button>
     </form>
     <a class="back" href="index.php?logout=1">Abmelden</a>
