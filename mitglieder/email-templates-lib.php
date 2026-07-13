@@ -63,6 +63,31 @@ function load_email_templates(): array
     return $out;
 }
 
+// Setzt genau EIN Template auf den mitgelieferten Standard (Seed) zurueck, indem
+// nur dessen Override-Eintrag aus data/email-templates.json entfernt wird - die
+// anderen Templates bleiben unangetastet. Da nicht der aktuelle Seed-Inhalt
+// hineinkopiert, sondern der Override geloescht wird, greift danach beim naechsten
+// Laden automatisch wieder load_email_templates()' Seed-Fallback - inkl. kuenftiger
+// Seed-Aktualisierungen im Code, ohne dass dafuer erneut manuell zurueckgesetzt
+// werden muesste.
+function reset_email_template(string $key): void
+{
+    if (!isset(email_template_defs()[$key])) {
+        return;
+    }
+    $data = email_templates_read_file(EMAIL_TEMPLATES_DATA_FILE);
+    unset($data[$key]);
+    $dir = dirname(EMAIL_TEMPLATES_DATA_FILE);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+    file_put_contents(
+        EMAIL_TEMPLATES_DATA_FILE,
+        json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        LOCK_EX
+    );
+}
+
 // Speichert nur bekannte Keys + subject/body nach data/email-templates.json.
 function save_email_templates(array $templates): void
 {

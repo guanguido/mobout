@@ -270,6 +270,16 @@ gleiches `data/`-Seed-Muster wie MOTD/Expeditionen.
 - **Admin-UI:** Panel „E-Mail-Templates" in `admin/index.php` (`#email-templates-bereich`) –
   Betreff-Feld + Textarea je Template, darunter die für dieses Template gültigen Platzhalter.
   Speichert über `admin/email-templates-save.php`.
+- **Auf Standard zurücksetzen:** Da einmal gespeicherte, eigene Anpassungen eines Templates
+  (`mitglieder/data/email-templates.json`, git-ignoriert) dauerhaft Vorrang vor dem git-getrackten
+  Seed haben – auch wenn der Seed später im Code verbessert wird (z. B. ein neuer Platzhalter) –,
+  gibt es je Template einen Button „Auf Standard zurücksetzen" im Admin-Panel. Er löscht nur den
+  Override-Eintrag dieses einen Templates aus `data/email-templates.json`
+  (`reset_email_template()` in `mitglieder/email-templates-lib.php`, ausgelöst über
+  `admin/email-templates-save.php`s `reset_key`-Zweig) – die übrigen drei Templates bleiben
+  unverändert, und das zurückgesetzte Template folgt danach wieder automatisch dem Seed (auch
+  bei künftigen Seed-Aktualisierungen, da der Seed-Inhalt nicht hineinkopiert, sondern der
+  Override entfernt wird).
 
 ## Nachricht des Tages (MOTD)
 

@@ -13,6 +13,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 admin_check_csrf();
 
+// Zuruecksetzen genau eines Templates auf den Standard (Seed) statt Speichern aller
+// Templates aus dem Formular - ausgeloest ueber den Submit-Button "Auf Standard
+// zuruecksetzen" (Button-Name reset_key, formnovalidate), siehe admin/index.php.
+$resetKey = (string) ($_POST['reset_key'] ?? '');
+if ($resetKey !== '') {
+    reset_email_template($resetKey);
+    header('Location: index.php?msg=template-reset#email-templates-bereich');
+    exit;
+}
+
 $posted = $_POST['templates'] ?? [];
 $clean = [];
 foreach (email_template_defs() as $key => $def) {

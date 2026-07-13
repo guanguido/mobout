@@ -42,6 +42,7 @@ $msgMap = [
     'image-removed' => 'Foto entfernt.',
     'consent-granted' => 'Zustimmung gespeichert.',
     'templates-saved' => 'E-Mail-Templates gespeichert.',
+    'template-reset' => 'Template auf Standard zurückgesetzt.',
     'error' => 'Aktion fehlgeschlagen – bitte Eingaben prüfen.',
     'export-error' => 'Export fehlgeschlagen.',
     'import-ok' => 'Import abgeschlossen.',
@@ -400,6 +401,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
         <section class="panel" id="email-templates-bereich">
             <h2>E-Mail-Templates</h2>
             <p class="hint">Betreff und Text der automatisch versendeten Mails. Platzhalter im Format <code>{{PLATZHALTER}}</code> werden beim Versand ersetzt &ndash; nur die jeweils darunter aufgeführten sind für dieses Template gültig.</p>
+            <p class="hint"><strong>Auf Standard zurücksetzen:</strong> verwirft eigene Anpassungen an <strong>genau diesem</strong> Template und stellt wieder den mitgelieferten Standardtext aus dem Code-Repository her. Nützlich z. B. nach einer Software-Aktualisierung, die den Standardtext verbessert hat (etwa einen neuen Platzhalter einführt) &ndash; einmal gespeicherte, eigene Texte werden sonst bei künftigen Aktualisierungen nicht automatisch angepasst. Wirkt sofort und ohne weitere Bestätigungsseite, betrifft nur das jeweilige Template, die übrigen drei bleiben unverändert.</p>
             <form method="post" action="email-templates-save.php">
                 <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
                 <?php $emailTemplates = load_email_templates(); ?>
@@ -410,6 +412,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                         <label>Betreff<input type="text" name="templates[<?= h($tplKey) ?>][subject]" value="<?= h($emailTemplates[$tplKey]['subject'] ?? '') ?>" required></label>
                         <label>Text<textarea name="templates[<?= h($tplKey) ?>][body]" rows="8"><?= h($emailTemplates[$tplKey]['body'] ?? '') ?></textarea></label>
                         <p class="hint" style="margin-top:0;">Gültige Platzhalter: <?php foreach ($tplDef['placeholders'] as $ph): ?><code>{{<?= h($ph) ?>}}</code> <?php endforeach; ?></p>
+                        <button type="submit" name="reset_key" value="<?= h($tplKey) ?>" formnovalidate class="danger" onclick="return confirm('Template &quot;<?= h($tplDef['label']) ?>&quot; wirklich auf den mitgelieferten Standardtext zurücksetzen? Eigene Änderungen an diesem Template gehen dabei verloren.');">Auf Standard zurücksetzen</button>
                     </details>
                 <?php endforeach; ?>
                 <button type="submit">Templates speichern</button>
