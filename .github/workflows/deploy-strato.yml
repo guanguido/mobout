@@ -38,6 +38,7 @@ jobs:
             index.html \
             motd.php \
             contact.php \
+            counter.php \
             expeditions.php \
             expedition-image.php \
             members.php \

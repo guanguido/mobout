@@ -4,6 +4,7 @@ require_once __DIR__ . '/../mitglieder/members-lib.php';
 require_once __DIR__ . '/../mitglieder/accounts-lib.php';
 require_once __DIR__ . '/../mitglieder/email-templates-lib.php';
 require_once __DIR__ . '/../mitglieder/role-permissions-lib.php';
+require_once __DIR__ . '/../mitglieder/visitor-counter-lib.php';
 require_once __DIR__ . '/data-transfer-lib.php';
 
 // Logout
@@ -222,6 +223,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
     foreach ($accounts as $acc) {
         $accountsByMemberId[$acc['memberId']] = $acc;
     }
+    $visitorCounter = read_visitor_counter();
 ?>
     <main>
         <h1 class="page-title">Administration</h1>
@@ -243,6 +245,11 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                 <p><a href="#zustimmungen-bereich">Zustimmungen ansehen &rarr;</a></p>
             </div>
             <div class="card">
+                <h2>Besucherzähler</h2>
+                <p>Seitenaufrufe und eindeutige Besucher der öffentlichen Website &ndash; ohne Tracking-Cookie, nur serverseitig ermittelt.</p>
+                <p><a href="#besucherzaehler-bereich">Besucherzähler ansehen &rarr;</a></p>
+            </div>
+            <div class="card">
                 <h2>E-Mail-Templates</h2>
                 <p>Betreff und Text der automatisch versendeten Mails (Willkommen, Einmalpasswort, Passwort geändert, Zustimmungs-Info) bearbeiten.</p>
                 <p><a href="#email-templates-bereich">Templates bearbeiten &rarr;</a></p>
@@ -254,7 +261,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
             </div>
             <div class="card">
                 <h2>Datenübertragung</h2>
-                <p>Alle dynamischen Daten (MOTD, Mitglieder, Expeditionen, Accounts, Templates, Berechtigungen, Zustimmungs-Audit) als ZIP-Bundle exportieren oder importieren &ndash; für Backup, Staging-Production-Übertragung und Migrationen.</p>
+                <p>Alle dynamischen Daten (MOTD, Mitglieder, Expeditionen, Accounts, Templates, Berechtigungen, Zustimmungs-Audit, Besucherzähler) als ZIP-Bundle exportieren oder importieren &ndash; für Backup, Staging-Production-Übertragung und Migrationen.</p>
                 <p><a href="#data-bereich">Daten übertragen &rarr;</a></p>
             </div>
         </div>
@@ -412,6 +419,20 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                     <?php if (empty($members)): ?>
                         <tr><td colspan="7" class="hint">Noch keine Mitglieder angelegt.</td></tr>
                     <?php endif; ?>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Besucherzähler: reine Read-only-Übersicht, wie Zustimmungs-Übersicht. Kein
+             Reset-Button (siehe CLAUDE.md, Abschnitt "Besucherzähler"). -->
+        <section class="panel" id="besucherzaehler-bereich">
+            <h2>Besucherzähler</h2>
+            <p class="hint">Seitenaufrufe zählen jeden Ladevorgang von mobout.de, eindeutige Besucher zählen pro Tag nur einmal (serverseitiger Hash aus Datum, IP und Browser-Kennung &ndash; kein Cookie, keine dauerhafte IP-Speicherung). Nicht auf der öffentlichen Website sichtbar.</p>
+            <table class="consent-table">
+                <tbody>
+                    <tr><th>Seitenaufrufe gesamt</th><td><?= h((string) $visitorCounter['totalViews']) ?></td></tr>
+                    <tr><th>Eindeutige Besucher (kumuliert)</th><td><?= h((string) $visitorCounter['uniqueVisitors']) ?></td></tr>
+                    <tr><th>Zuletzt aktualisiert</th><td><?= $visitorCounter['updatedAt'] ? h((string) $visitorCounter['updatedAt']) : '—' ?></td></tr>
                 </tbody>
             </table>
         </section>

@@ -17,13 +17,14 @@ mobout/
 ├── expedition-image.php # Öffentlicher Bild-Streaming-Endpunkt für Expeditionsfotos (kein Basic Auth)
 ├── members.php          # Öffentlicher Lese-Endpunkt für die Mitgliederliste als JSON (kein Basic Auth)
 ├── member-image.php     # Öffentlicher Bild-Streaming-Endpunkt für Mitglieder-Fotos (kein Basic Auth)
+├── counter.php           # Öffentlicher Schreib-Endpunkt für den Besucherzähler (kein Basic Auth), erhöht Seitenaufrufe/eindeutige Besucher
 ├── admin/               # Versteckter Admin-Bereich (eigene PHP-Session-Auth, NICHT Basic Auth)
-│   ├── index.php       # Login + Dashboard: Mitglieder-CRUD, Zustimmungs-Übersicht, E-Mail-Templates, Berechtigungen, Datenübertragung (Logo als Base64)
+│   ├── index.php       # Login + Dashboard: Mitglieder-CRUD, Zustimmungs-Übersicht, E-Mail-Templates, Berechtigungen, Besucherzähler, Datenübertragung (Logo als Base64)
 │   ├── auth.php        # Session-Auth, hardcodierter Admin (User "Admin" + bcrypt-Hash), CSRF-Helfer
 │   ├── members-save.php # CRUD-Schreib-Endpunkt für Mitglieder (action=create/update/delete/delete-image/grant-consent), legt bei E-Mail einen Account an
 │   ├── email-templates-save.php # Speichert Betreff/Text der editierbaren E-Mail-Templates
 │   ├── role-permissions-save.php # Speichert/setzt zurück die Berechtigungs-Matrix (Rolle x Recht)
-│   ├── data-transfer-lib.php    # Modul-Registry für Export/Import der dynamischen data/-Inhalte (MOTD, Mitglieder, Expeditionen, Accounts, E-Mail-Templates, Rollen-Berechtigungen, Zustimmungs-Audit-Log), Backup-Rotation
+│   ├── data-transfer-lib.php    # Modul-Registry für Export/Import der dynamischen data/-Inhalte (MOTD, Mitglieder, Expeditionen, Accounts, E-Mail-Templates, Rollen-Berechtigungen, Zustimmungs-Audit-Log, Besucherzähler), Backup-Rotation
 │   ├── data-transfer-export.php # Baut ein ZIP-Bundle aller Module und liefert es als Download
 │   ├── data-transfer-import.php # Nimmt ein ZIP-Bundle entgegen, ersetzt ausgewählte Module vollständig (mit Backup)
 │   ├── data-transfer-backup-delete.php # Löscht eine einzelne Sicherung aus mitglieder/data/backups/
@@ -49,7 +50,8 @@ mobout/
 │   ├── members-lib.php       # Gemeinsame load/save-Funktionen für Mitglieder inkl. Seeding-Logik + Consent-Feld-Normalisierung
 │   ├── members-seed.json     # Git-getrackter Ausgangsbestand der 17 migrierten Mitglieder
 │   ├── members-seed-images/  # Git-getrackte Startfotos der Mitglieder (Fallback von member-image.php)
-│   ├── data/           # Nur serverseitig, git-ignoriert (motd.txt, expeditions.json, expeditions-images/, members.json, members-images/, accounts.json, email-templates.json, role-permissions.json, consent-log/, backups/) – überlebt Deploys; per .htaccess ("Require all denied") gegen Direktzugriff gesperrt
+│   ├── visitor-counter-lib.php # Lese-/Schreibfunktionen für den Besucherzähler (Seitenaufrufe, eindeutige Besucher), von counter.php und admin/index.php genutzt
+│   ├── data/           # Nur serverseitig, git-ignoriert (motd.txt, expeditions.json, expeditions-images/, members.json, members-images/, accounts.json, email-templates.json, role-permissions.json, consent-log/, visitor-counter.json, visitor-counter-today.json, backups/) – überlebt Deploys; per .htaccess ("Require all denied") gegen Direktzugriff gesperrt
 │   └── .htaccess       # Sperrt Direktzugriff auf data/ (RedirectMatch 403); KEIN Basic Auth mehr
 ├── assets/
 │   ├── images/         # Originalfotos (Personenbilder, Logos)
@@ -70,8 +72,9 @@ mobout/
   `mitglieder/password-change.php`, `mitglieder/consent-save.php`, `mitglieder/motd-save.php`,
   `motd.php`, `contact.php`, `expeditions.php`, `expedition-image.php`,
   `mitglieder/expeditions-save.php`, `mitglieder/expeditions-lib.php`, `members.php`,
-  `member-image.php`, `mitglieder/members-lib.php`, `mitglieder/role-permissions-lib.php` und
-  `admin/*.php`, siehe eigene Abschnitte unten
+  `member-image.php`, `mitglieder/members-lib.php`, `mitglieder/role-permissions-lib.php`,
+  `counter.php`, `mitglieder/visitor-counter-lib.php` und `admin/*.php`, siehe eigene Abschnitte
+  unten
 
 ## Sprache
 
@@ -553,11 +556,53 @@ nur als 2D-Matrix statt flacher Map.
   inklusive des beschriebenen Auswegs aus einem erzwungenen Passwortwechsel. Da der Default für alle
   Rollen `true` ist, ist das nur bei aktiver Fehlkonfiguration relevant.
 
+## Besucherzähler
+
+Zeigt dem Admin, wie oft die öffentliche Website aufgerufen wird – getrennt nach
+**Seitenaufrufen** (jeder Ladevorgang von `index.html` zählt) und **eindeutigen Besuchern**
+(Mehrfachbesuch am selben Kalendertag zählt nur einmal). **Nur im Admin-Bereich sichtbar**, nicht auf
+der öffentlichen Website. Folgt demselben `data/`-Modul-Muster wie MOTD/Expeditionen/E-Mail-Templates.
+
+- **Kein Tracking-Cookie, kein Cookie-Banner nötig:** Eindeutigkeit wird rein serverseitig über einen
+  **täglich rotierenden, nicht umkehrbaren SHA-256-Hash** aus `Datum|IP|User-Agent` ermittelt. Es wird
+  nie eine IP-Adresse dauerhaft gespeichert – nur eine tagesbegrenzte Hash-Menge zum Entduplizieren,
+  die am nächsten Tag automatisch verworfen wird. Dauerhaft persistiert werden ausschließlich zwei
+  Zahlen (`totalViews`, `uniqueVisitors`) plus ein Zeitstempel.
+- **Datenmodell (zwei Dateien unter `mitglieder/data/`, git-ignoriert, server-only):**
+  - `visitor-counter.json` (dauerhaft): `{"totalViews": int, "uniqueVisitors": int, "updatedAt": "ISO-8601"}`.
+    `uniqueVisitors` ist eine **Kumulation über alle Tage** (dieselbe Person an zwei verschiedenen
+    Tagen zählt zweimal), keine lebenslang eindeutige Besucherzahl.
+  - `visitor-counter-today.json` (transient, rotiert automatisch beim ersten Request eines neuen
+    Tages): `{"date": "YYYY-MM-DD", "hashes": [...]}` – dient einzig dem Entduplizieren innerhalb des
+    laufenden Tages, kein Cron nötig.
+- **Lib:** `mitglieder/visitor-counter-lib.php` mit `read_visitor_counter()`/`write_visitor_counter()`
+  und `record_visit(string $ip, string $userAgent)`. Die komplette Lese-Ändern-Schreiben-Operation
+  (inkl. der Tagesdatei) läuft innerhalb eines einzigen `flock(LOCK_EX)` auf `visitor-counter.json`,
+  damit gleichzeitige Besucher sich nicht gegenseitig Updates überschreiben (Race-Condition-Schutz,
+  wichtig gerade bei einem reinen Zähler).
+- **Erfassung:** `counter.php` (Repo-Root, öffentlich, kein Auth – Muster wie `motd.php`/`contact.php`)
+  nimmt einen POST-Request entgegen und ruft `record_visit()` mit `$_SERVER['REMOTE_ADDR']` und
+  `$_SERVER['HTTP_USER_AGENT']` auf. `index.html` löst das per Fire-and-forget-`fetch('/counter.php',
+  {method: 'POST'})` direkt neben dem bestehenden MOTD-Fetch aus (`.catch(() => {})`, kein sichtbarer
+  Fehler für den Website-Besucher, falls der Request fehlschlägt).
+- **Anzeige:** Panel „Besucherzähler" in `admin/index.php` (`#besucherzaehler-bereich`, direkt nach
+  der Zustimmungs-Übersicht, da beide reine Read-only-Übersichten sind) zeigt `totalViews`,
+  `uniqueVisitors` und `updatedAt` aus `read_visitor_counter()`. Kein Formular, kein CSRF nötig (reine
+  Anzeige). Bewusst **kein Reset-Button**.
+- **Export/Import:** Modul `visitor-counter` in `admin/data-transfer-lib.php`s
+  `data_transfer_modules()`-Registry, exportiert/importiert **nur** `visitor-counter.json` – die
+  transiente `visitor-counter-today.json` ist reiner Arbeitszustand und bleibt bewusst außen vor
+  (rotiert ohnehin automatisch, keine Backup-/Übertragungs-Relevanz).
+- **Bekannte Grenzen (bewusst, Einfachheit vor Robustheit – wie an anderen Stellen der Codebase):**
+  kein Bot-/Crawler-Filtering (erhöht `totalViews`), kein Rate-Limit, IP+User-Agent-Hash ist eine
+  Näherung für „eindeutig" (mehrere Personen hinter derselben IP am selben Tag können unterzählt
+  werden; dasselbe Gerät zählt an unterschiedlichen Tagen erneut).
+
 ## Datenübertragung (Admin)
 
 Alle dynamischen, git-ignorierten Datenbestände (MOTD, Mitglieder, Expeditionen, Accounts,
-E-Mail-Templates, Rollen-Berechtigungen, Zustimmungs-Audit-Log – jeweils `mitglieder/data/...`, siehe
-oben) existieren pro Umgebung (production/staging) getrennt und entstehen
+E-Mail-Templates, Rollen-Berechtigungen, Zustimmungs-Audit-Log, Besucherzähler – jeweils
+`mitglieder/data/...`, siehe oben) existieren pro Umgebung (production/staging) getrennt und entstehen
 ausschließlich durch Nutzereingaben in der App, nicht durch Deploys. Damit sie sich trotzdem sichern,
 zwischen Umgebungen übertragen und für lokale Migrationen/Transformationen bearbeiten lassen, gibt es im
 Admin-Bereich ein Export/Import als ein ZIP-Bundle. **Drei Zwecke in einem Mechanismus:** Backup
@@ -575,7 +620,7 @@ abweichender Stände.
 
 - **Architektur:** `admin/data-transfer-lib.php` definiert eine zentrale Modul-Registry
   (`data_transfer_modules()`) mit den Modulen `motd`, `members`, `expeditions`, `accounts`,
-  `email-templates`, `role-permissions`, `consent-log`. Jedes Modul hat eine `export`- und eine `import`-Funktion;
+  `email-templates`, `role-permissions`, `consent-log`, `visitor-counter`. Jedes Modul hat eine `export`- und eine `import`-Funktion;
   Export-/Import-Endpunkt sowie die Admin-UI iterieren generisch über die Registry (jedes Modul im
   UI einzeln per Checkbox wähl-/abwählbar). **Erweiterbar:** ein künftiger weiterer dynamischer
   Datentyp nach demselben `data/`-Prinzip wird durch zwei neue Funktionen plus einen weiteren
@@ -593,7 +638,7 @@ abweichender Stände.
   (`members/members.json` + `members/images/...`, `expeditions/expeditions.json` +
   `expeditions/images/...`, `motd/motd.txt`, `accounts/accounts.json`,
   `email-templates/email-templates.json`, `role-permissions/role-permissions.json`,
-  `consent-log/<datei>.json` je Zustimmung).
+  `consent-log/<datei>.json` je Zustimmung, `visitor-counter/visitor-counter.json`).
 - **Export:** `admin/data-transfer-export.php` (Session- + CSRF-geschützt) baut das ZIP aus allen
   Modulen und liefert es als Download (`mobout-data-<host>-<Zeitstempel>.zip`).
 - **Import:** `admin/data-transfer-import.php` (Session- + CSRF-geschützt) validiert das hochgeladene
@@ -649,7 +694,7 @@ gewünschten Mitglieder setzen, damit die Seite nicht leer bleibt.
 - Secrets vorhanden: `STRATO_SSH_KEY`, `STRATO_HOST`, `STRATO_USER`
 - Zwei-Ziel-Push: `git push origin <branch>` geht an NAS (Master-Backup) + GitHub
 - Pull nur vom NAS (`origin` fetch = NAS, push = NAS + GitHub)
-- Übertragen werden `index.html` + `motd.php` + `contact.php` + `expeditions.php` + `expedition-image.php` + `members.php` + `member-image.php` + `admin/` + `mitglieder/` (wenn `assets/` deployrelevant wird: Workflow anpassen)
+- Übertragen werden `index.html` + `motd.php` + `contact.php` + `counter.php` + `expeditions.php` + `expedition-image.php` + `members.php` + `member-image.php` + `admin/` + `mitglieder/` (wenn `assets/` deployrelevant wird: Workflow anpassen)
 - Kein Basic-Auth-Seed-Schritt mehr nötig (individuelle Accounts statt geteiltem Login): `accounts.json`, `email-templates.json`, `consent-log/` und die `data/`-Härtung entstehen zur Laufzeit (`member_ensure_data_hardening()` in `mitglieder/member-auth.php`) und sind über `--exclude=data/` bereits deploy-sicher
 
 ## Arbeitsweise

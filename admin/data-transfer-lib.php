@@ -14,6 +14,7 @@ require_once __DIR__ . '/../mitglieder/expeditions-lib.php';
 require_once __DIR__ . '/../mitglieder/accounts-lib.php';
 require_once __DIR__ . '/../mitglieder/email-templates-lib.php';
 require_once __DIR__ . '/../mitglieder/role-permissions-lib.php';
+require_once __DIR__ . '/../mitglieder/visitor-counter-lib.php';
 
 const DATA_TRANSFER_MANIFEST_VERSION = 1;
 const DATA_TRANSFER_MAX_ZIP_BYTES = 50 * 1024 * 1024;
@@ -312,6 +313,15 @@ function data_transfer_validate_role_permissions(array $data): bool
     return true;
 }
 
+// Lockere Schema-Prüfung wie bei data_transfer_validate_accounts(): nur die beiden
+// Zähler müssen numerisch sein, updatedAt ist optional.
+function data_transfer_validate_visitor_counter(array $data): bool
+{
+    return isset($data['totalViews'], $data['uniqueVisitors'])
+        && is_numeric($data['totalViews'])
+        && is_numeric($data['uniqueVisitors']);
+}
+
 // --- Export je Modul: liefert JSON-Dateiinhalte + Quellpfade der zugehörigen Bilder.
 
 function data_transfer_export_motd(): array
@@ -394,6 +404,19 @@ function data_transfer_export_role_permissions(): array
         'files' => ['role-permissions/role-permissions.json' => json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)],
         'images' => [],
         'count' => count($data),
+    ];
+}
+
+// Nur die dauerhafte visitor-counter.json wird exportiert - die transiente
+// visitor-counter-today.json (Tages-Hashes zum Entduplizieren) ist Arbeitszustand,
+// rotiert ohnehin automatisch und gehört nicht ins Backup/die Übertragung.
+function data_transfer_export_visitor_counter(): array
+{
+    $data = read_visitor_counter();
+    return [
+        'files' => ['visitor-counter/visitor-counter.json' => json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)],
+        'images' => [],
+        'count' => null,
     ];
 }
 
@@ -582,6 +605,26 @@ function data_transfer_import_role_permissions(ZipArchive $zip): array
     return ['ok' => true, 'summary' => 'Berechtigungen importiert.'];
 }
 
+function data_transfer_import_visitor_counter(ZipArchive $zip): array
+{
+    $idx = $zip->locateName('visitor-counter/visitor-counter.json');
+    if ($idx === false) {
+        return ['ok' => false, 'summary' => 'Besucherzähler: Datei nicht im Archiv gefunden, übersprungen.'];
+    }
+    $json = $zip->getFromIndex($idx);
+    $data = $json !== false ? json_decode($json, true) : null;
+    if (!is_array($data) || !data_transfer_validate_visitor_counter($data)) {
+        return ['ok' => false, 'summary' => 'Besucherzähler: Datei ungültig, Import abgebrochen.'];
+    }
+
+    if (data_transfer_backup_file('visitor-counter', COUNTER_DATA_FILE)) {
+        data_transfer_prune_backups('visitor-counter');
+    }
+
+    write_visitor_counter($data);
+    return ['ok' => true, 'summary' => 'Besucherzähler importiert.'];
+}
+
 // Bewusst ADDITIV statt vollständig ersetzend: das Audit-Log darf durch einen Import
 // keine bereits vorhandenen Nachweise verlieren. Vorhandene Dateien (gleicher
 // Dateiname) werden nicht überschrieben, nur fehlende ergänzt.
@@ -656,6 +699,11 @@ function data_transfer_modules(): array
             'label' => 'Zustimmungs-Audit-Log',
             'export' => 'data_transfer_export_consent_log',
             'import' => 'data_transfer_import_consent_log',
+        ],
+        'visitor-counter' => [
+            'label' => 'Besucherzähler',
+            'export' => 'data_transfer_export_visitor_counter',
+            'import' => 'data_transfer_import_visitor_counter',
         ],
     ];
 }

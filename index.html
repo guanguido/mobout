@@ -1021,6 +1021,9 @@
             })
             .catch(() => {});
 
+        // Besucherzähler (best effort, kein Tracking-Cookie, keine Anzeige auf der Website)
+        fetch('/counter.php', { method: 'POST' }).catch(() => {});
+
         // Hamburger menu toggle
         const hamburger = document.getElementById('hamburger');
         const navMenu = document.querySelector('nav');
