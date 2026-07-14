@@ -10,15 +10,11 @@ require_once __DIR__ . '/../mitglieder/navionics-lib.php';
 require_admin();
 admin_check_csrf();
 
-if (isset($_POST['reset_key'])) {
-    reset_navionics();
-} else {
-    $data = [];
-    foreach (navionics_field_defs() as $key => $label) {
-        $data[$key] = $_POST['navionics'][$key] ?? '';
-    }
-    save_navionics($data);
+$data = [];
+foreach (navionics_field_defs() as $key => $label) {
+    $data[$key] = $_POST['navionics'][$key] ?? '';
 }
+save_navionics($data);
 
 header('Location: index.php?msg=navionics-saved#navionics-bereich');
 exit;

@@ -298,10 +298,10 @@ Registry, Seed-Fallback, load/save/reset):
   `mitglieder/navionics-seed.json` (git-getrackt, aktuelle Default-Werte: Login, Passwort, App,
   Karten, Läuft ab).
 - **Lib:** `mitglieder/navionics-lib.php` mit der Registry `navionics_field_defs()` (fünf Felder),
-  `load_navionics()` (Daten-vor-Seed-Fallback), `save_navionics()`, `reset_navionics()`.
+  `load_navionics()` (Daten-vor-Seed-Fallback), `save_navionics()`.
 - **Admin-UI:** Panel „Navionics Zugangsdaten" in `admin/index.php` (`#navionics-bereich`) –
   ein Textfeld je Feld (Login, Passwort, App, Karten, Läuft ab). Speichert über
-  `admin/navionics-save.php`. Button „Auf Standard zurücksetzen" revert zur Seed-Datei.
+  `admin/navionics-save.php`. Kein Reset-Button, da es keinen sinnvollen Standard gibt.
 - **Member-Bereich:** `mitglieder/index.php` lädt die Daten dynamisch via `load_navionics()`,
   gating bleibt `navionics_view`-Permission (read-only, kein Mitglied kann bearbeiten).
 - **Export/Import:** Modul `navionics` in `admin/data-transfer-lib.php`s `data_transfer_modules()`

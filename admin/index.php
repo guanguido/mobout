@@ -476,10 +476,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                 <?php foreach (navionics_field_defs() as $key => $label): ?>
                     <label><?= h($label) ?><input type="text" name="navionics[<?= h($key) ?>]" value="<?= h($navionics[$key] ?? '') ?>" style="width:100%;"></label>
                 <?php endforeach; ?>
-                <p>
-                    <button type="submit">Speichern</button>
-                    <button type="submit" name="reset_key" value="1" formnovalidate class="danger" onclick="return confirm('Auf Standard-Werte zurücksetzen?');">Auf Standard zurücksetzen</button>
-                </p>
+                <p><button type="submit">Speichern</button></p>
             </form>
         </section>
 

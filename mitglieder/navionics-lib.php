@@ -64,11 +64,3 @@ function save_navionics(array $data): void
         json_encode($sanitized, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
     );
 }
-
-function reset_navionics(): void
-{
-    $file = navionics_data_file();
-    if (is_file($file)) {
-        unlink($file);
-    }
-}
