@@ -200,8 +200,9 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
         <?php endif; ?>
         <form method="post" action="index.php">
             <input type="hidden" name="action" value="login">
-            <label for="u">Benutzername</label>
+            <label for="u">Benutzername oder E-Mail</label>
             <input type="text" id="u" name="username" autocomplete="username" autofocus required>
+            <p style="color:#666;font-size:0.85rem;margin:0.15rem 0 0.5rem;">Haupt-Admin: Benutzername. Member-Admins: eigene E-Mail-Adresse + Mitglieder-Passwort.</p>
             <label for="p">Passwort</label>
             <input type="password" id="p" name="password" autocomplete="current-password" required>
             <button type="submit">Anmelden</button>
@@ -224,7 +225,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
 ?>
     <main>
         <h1 class="page-title">Administration</h1>
-        <p class="intro">Mitglieder (angezeigte Personen) mit individuellem E-Mail-Login verwalten. Änderungen an Mitgliedern erscheinen sofort auf der öffentlichen Website &ndash; allerdings nur für Mitglieder, die der Anzeige zugestimmt haben.</p>
+        <p class="intro">Angemeldet als <strong><?= h(admin_current_label()) ?></strong>. Mitglieder (angezeigte Personen) mit individuellem E-Mail-Login verwalten. Änderungen an Mitgliedern erscheinen sofort auf der öffentlichen Website &ndash; allerdings nur für Mitglieder, die der Anzeige zugestimmt haben.</p>
 
         <?php if ($flash !== ''): ?>
             <div class="flash <?= h($flashType) ?>"><?= h($flash) ?></div>
@@ -279,6 +280,11 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                             <?php endforeach; ?>
                         </select>
                     </label>
+                    <label style="display:flex;align-items:center;gap:0.5rem;flex-direction:row;">
+                        <input type="checkbox" name="isAdmin" value="1" style="width:auto;margin:0;">
+                        Admin-Berechtigung (Zugang zum Admin-Bereich)
+                    </label>
+                    <p class="field-hint">Zusätzlich zur Rolle. Erlaubt die Anmeldung im Admin-Bereich mit E-Mail + Mitglieder-Passwort und volle Admin-Rechte. Setzt einen eingerichteten Login voraus (E-Mail + selbst gesetztes Passwort).</p>
                     <label>Kurztext<textarea name="text" rows="3"></textarea></label>
                     <label>Ersatz-Icon (Kürzel/Emoji – nur sichtbar, wenn kein Foto vorhanden ist)<input type="text" name="icon" maxlength="4" placeholder="z. B. A oder 🎣"></label>
                     <label>Kleines Icon nach dem Text (Emoji, optional)<input type="text" name="emoji" maxlength="20" placeholder="z. B. 🎣"></label>
@@ -293,7 +299,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                     <?php foreach ($byRole[$roleKey] as $m): ?>
                         <?php $mAcc = $accountsByMemberId[$m['id']] ?? null; ?>
                         <details class="member-entry">
-                            <summary><?= h($m['name']) ?><span class="role-badge"><?= h(ROLE_LABELS[$m['role']] ?? $m['role']) ?></span></summary>
+                            <summary><?= h($m['name']) ?><span class="role-badge"><?= h(ROLE_LABELS[$m['role']] ?? $m['role']) ?></span><?php if (!empty($m['isAdmin'])): ?><span class="role-badge" style="background:#7c3f00;">Admin</span><?php endif; ?></summary>
 
                             <p class="hint" style="margin-top:0;">E-Mail: <strong><?= $mAcc ? h($mAcc['email']) : '&mdash; kein Account'; ?></strong></p>
                             <?php if ($mAcc): ?>
@@ -344,6 +350,11 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                                         <?php endforeach; ?>
                                     </select>
                                 </label>
+                                <label style="display:flex;align-items:center;gap:0.5rem;flex-direction:row;">
+                                    <input type="checkbox" name="isAdmin" value="1" style="width:auto;margin:0;" <?= !empty($m['isAdmin']) ? 'checked' : '' ?>>
+                                    Admin-Berechtigung (Zugang zum Admin-Bereich)
+                                </label>
+                                <p class="field-hint">Zusätzlich zur Rolle. Anmeldung im Admin-Bereich mit E-Mail + Mitglieder-Passwort; setzt einen eingerichteten Login voraus. Abwählen entzieht die Berechtigung.</p>
                                 <label>Kurztext<textarea name="text" rows="3"><?= h($m['text'] ?? '') ?></textarea></label>
                                 <label>Ersatz-Icon (Kürzel/Emoji – Fallback ohne Foto)<input type="text" name="icon" maxlength="4" value="<?= h($m['icon'] ?? '') ?>"></label>
                                 <label>Kleines Icon nach dem Text (Emoji, optional)<input type="text" name="emoji" maxlength="20" value="<?= h($m['emoji'] ?? '') ?>"></label>

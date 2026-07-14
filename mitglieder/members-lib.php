@@ -24,6 +24,15 @@ function normalize_member(array $entry): array
     $entry['consentGiven'] = (bool) ($entry['consentGiven'] ?? false);
     $entry['consentAt'] = $entry['consentAt'] ?? null;
     $entry['consentSource'] = $entry['consentSource'] ?? null; // 'self' | 'admin' | null
+    // Administrative Zusatz-Berechtigung, UNABHAENGIG von der fachlichen Rolle
+    // (team/supporter/anwaerter). true = darf sich im Admin-Bereich anmelden und hat
+    // dort dieselben (vollen) Rechte wie der hartcodierte Admin - ein binaeres Flag,
+    // keine abgestufte Admin-Rechte-Matrix. Nicht zu verwechseln mit der Rolle-x-Recht-
+    // Matrix in role-permissions-lib.php, die nur den Mitgliederbereich steuert.
+    // Altbestaende ohne dieses Feld bekommen hier den sicheren Default false (kein
+    // Migrationsskript noetig, analog zu den Consent-Feldern); erst beim naechsten
+    // save_members() persistiert.
+    $entry['isAdmin'] = (bool) ($entry['isAdmin'] ?? false);
     return $entry;
 }
 

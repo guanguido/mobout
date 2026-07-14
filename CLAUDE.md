@@ -381,7 +381,8 @@ Admin. Übernimmt das Seed-/`data/`-Prinzip der Expeditionen. **Begriffe strikt 
 `icon` (Kürzel/Emoji, Ersatz-Avatar **wenn kein Foto**), `emoji` (kleines Icon **nach dem Text**,
 optional, unabhängig vom Foto), `image` (Dateiname, optional, ein Foto), `consentGiven`/`consentAt`/
 `consentSource` (Zustimmung zur öffentlichen Anzeige, siehe „Individuelle Logins &
-Anzeige-Zustimmung"), `createdAt`/`updatedAt`. Die beiden Icon-Felder sind bewusst getrennt: `icon`
+Anzeige-Zustimmung"), `isAdmin` (bool, administrative Zusatz-Berechtigung, siehe „Administrative
+Berechtigung (Member-Admins)"), `createdAt`/`updatedAt`. Die beiden Icon-Felder sind bewusst getrennt: `icon`
 ersetzt das Foto, `emoji` ist ein dekoratives Symbol hinter dem Beschreibungstext. Die E-Mail-Adresse
 und alle Login-Felder liegen **nicht** hier, sondern getrennt in `mitglieder/data/accounts.json`
 (siehe unten). **Reihenfolge = Anzeige-Reihenfolge** (kein Sortieren; neue Einträge ans Ende).
@@ -396,11 +397,14 @@ Mitglieder), solange `data/members.json` fehlt. Startfotos liegen git-getrackt i
 `mitglieder/members-seed-images/`.
 
 **Admin-Bereich (`admin/`, außerhalb `mitglieder/`, daher KEIN Basic Auth):**
-- Schutz über **PHP-Session-Login** (`admin/auth.php`): Benutzer `Admin`, Passwort nur als bcrypt-Hash
-  (`ADMIN_PASS_HASH`, nie Klartext). Login/Logout, CSRF-Token auf allen mutierenden Formularen. Bewusst
-  unabhängig vom Mitglied-Login, damit dessen Änderung den Admin nie aussperrt. Passwort ändern: neuen
-  Hash erzeugen (`php -r "echo password_hash('NEUES_PW', PASSWORD_BCRYPT);"`) und in `admin/auth.php`
-  eintragen, committen, deployen.
+- Schutz über **PHP-Session-Login** (`admin/auth.php`): der hartcodierte Haupt-Admin (Benutzer `Admin`,
+  Passwort nur als bcrypt-Hash `ADMIN_PASS_HASH`, nie Klartext) **oder** ein Member-Admin (Mitglied mit
+  `isAdmin = true`, meldet sich mit E-Mail + Mitglieder-Passwort an, siehe „Administrative Berechtigung
+  (Member-Admins)"). Beide erhalten identische, volle Rechte. Login/Logout, CSRF-Token auf allen
+  mutierenden Formularen. Bewusst unabhängig vom Mitglied-Login, damit dessen Änderung den Haupt-Admin
+  nie aussperrt. Haupt-Admin-Passwort ändern: neuen Hash erzeugen
+  (`php -r "echo password_hash('NEUES_PW', PASSWORD_BCRYPT);"`) und in `admin/auth.php` eintragen,
+  committen, deployen.
 - `admin/index.php`: Login-Formular bzw. Dashboard mit Mitglieder-CRUD (nach Rolle gruppiert,
   E-Mail-Feld, Foto-Upload/-Entfernen), Panel „Zustimmungs-Übersicht" (`#zustimmungen-bereich`,
   Tabelle aller Mitglieder mit E-Mail, Verifiziert-Status, Zustimmungs-Status/-Datum/-Quelle und
@@ -410,7 +414,10 @@ Mitglieder), solange `data/members.json` fehlt. Startfotos liegen git-getrackt i
   jpg/jpeg/png/webp, `getimagesize()`, max. 5 MB, serverseitiger Dateiname `<id>.<ext>`). Bei
   Angabe/Änderung einer E-Mail wird über `mitglieder/accounts-lib.php` ein Account angelegt/
   aktualisiert und die Willkommensmail verschickt; `grant-consent` setzt die Bestands-Zustimmung
-  (siehe „Individuelle Logins & Anzeige-Zustimmung").
+  (siehe „Individuelle Logins & Anzeige-Zustimmung"). `create`/`update` lesen zusätzlich die Checkbox
+  `isAdmin` (Admin-Berechtigung, siehe unten). **Wichtig:** Dieselbe Datei bindet `members-lib.php`/
+  `accounts-lib.php` per `require_once` ein, weil `admin/auth.php` sie seit der Member-Admin-Anmeldung
+  bereits lädt – ein zweites plain `require` würde die Funktionen erneut deklarieren (Fatal error).
 - `admin/email-templates-save.php`: speichert Betreff/Text der vier E-Mail-Templates, Session- +
   CSRF-geschützt.
 - **Versteckter Zugang:** dezenter Link (unauffälliges `·`) im Footer von `index.html` → `/admin/`.
@@ -430,6 +437,44 @@ Mitglieder), solange `data/members.json` fehlt. Startfotos liegen git-getrackt i
 - `index.html` lädt per `fetch('/members.php')`, gruppiert nach Rolle und baut die `.team-member`-Karten
   per DOM auf (`textContent`, nie `innerHTML`); Foto via `member-image.php`, sonst Gradient-Avatar mit
   `icon`-Text.
+
+## Administrative Berechtigung (Member-Admins)
+
+Zusätzlich zum hartcodierten Haupt-Admin (Benutzer `Admin` in `admin/auth.php`) kann **jedes Mitglied**
+die administrative Berechtigung „Admin" bekommen und sich damit im Admin-Bereich anmelden. Wichtige
+Abgrenzungen:
+
+- **Binäres Flag, kein Rechte-Modell:** Ein Mitglied hat `isAdmin` = `true`/`false` (Feld in
+  `mitglieder/data/members.json`, siehe Datenmodell oben). Wer sich im Admin-Bereich anmelden kann,
+  darf dort **alles** – exakt dieselben Funktionen wie der Haupt-Admin. Es gibt bewusst **keine**
+  abgestufte Admin-Rechte-Matrix. **Nicht verwechseln** mit den „Rollen-Berechtigungen" (nächster
+  Abschnitt): jene Matrix (Rolle × Recht) steuert ausschließlich den *Mitgliederbereich*
+  (`mitglieder/`), nicht den Admin-Zugang. `isAdmin` ist davon vollständig unabhängig.
+- **Unabhängig von der fachlichen Rolle:** `isAdmin` ist orthogonal zu `role`
+  (`team`/`supporter`/`anwaerter`). Jede Kombination ist möglich (z. B. „Anwärter mit Admin-Berechtigung").
+- **Login-Weg:** Ein Member-Admin meldet sich im Admin-Login mit seiner **E-Mail + seinem
+  Mitglieder-Passwort** an (keine separaten Admin-Zugangsdaten – es wird der bestehende Account aus
+  `mitglieder/data/accounts.json` wiederverwendet). `admin_attempt_login()` in `admin/auth.php` prüft
+  erst den Haupt-Admin, dann `admin_member_admin_login()`: Account per E-Mail, `password_verify()`, und
+  das zugehörige Mitglied muss `isAdmin === true` tragen. Beide Wege setzen dieselbe Session
+  (`admin_authenticated`); `admin_current_label()` liefert nur für die Begrüßung „Angemeldet als …"
+  den Namen. `admin/auth.php` bindet dazu `accounts-lib.php` + `members-lib.php` per `require_once` ein,
+  **nicht** `member-auth.php` (die brächte eine zweite `session_start()`-/Cookie-Logik; Admin- und
+  Mitgliederbereich teilen dieselbe PHP-Session, nutzen aber getrennte Session-Keys).
+- **Einmalpasswort genügt nicht:** Solange ein Konto `mustChangePassword` trägt (frisch angelegt, nur
+  Einmalpasswort), ist **kein** Admin-Login möglich. Der Member muss sein Konto zuerst im
+  Mitgliederbereich fertig einrichten (echtes Passwort setzen).
+- **Vergabe/Entzug:** ausschließlich im Admin-Bereich über die Checkbox „Admin-Berechtigung" in den
+  Mitglieder-Formularen (`admin/index.php` → `admin/members-save.php`, `create`/`update`). Standardmäßig
+  hat kein neu angelegtes Mitglied die Berechtigung; Abwählen entzieht sie. Ein Member-Admin darf sie –
+  wie der Haupt-Admin – anderen und sich selbst vergeben/entziehen. Die Member-Zusammenfassung im
+  Admin-Panel zeigt ein „Admin"-Badge.
+- **Kein Lockout & Backup:** Der hartcodierte Haupt-Admin `Admin` bleibt immer als Backup-Zugang
+  bestehen und ist kein Mitglied (über die dynamische Verwaltung nicht entfernbar) – ein versehentlicher
+  Entzug aller `isAdmin`-Flags sperrt daher nie komplett aus.
+- **Nicht öffentlich:** `isAdmin` steht **nicht** in der Feld-Whitelist von `members.php`/
+  `member-image.php` und wird nie öffentlich ausgeliefert. Über das `members`-Modul der Datenübertragung
+  (Export/Import) wird es hingegen automatisch mitgeführt (Teil von `members.json`).
 
 ## Rollen-Berechtigungen
 

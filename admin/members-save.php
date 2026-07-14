@@ -5,8 +5,11 @@
 // Mitglied. Legt bei E-Mail-Angabe zusätzlich einen individuellen Login-Account an
 // (siehe mitglieder/accounts-lib.php) und verschickt die Willkommensmail.
 require __DIR__ . '/auth.php';
-require __DIR__ . '/../mitglieder/members-lib.php';
-require __DIR__ . '/../mitglieder/accounts-lib.php';
+// require_once (nicht require): auth.php bindet members-lib.php/accounts-lib.php seit
+// der Member-Admin-Anmeldung bereits per require_once ein - ein zweites plain require
+// wuerde die Funktionen/Konstanten erneut deklarieren (Fatal error).
+require_once __DIR__ . '/../mitglieder/members-lib.php';
+require_once __DIR__ . '/../mitglieder/accounts-lib.php';
 
 require_admin();
 
@@ -73,6 +76,9 @@ if ($action === 'create') {
     $emoji = trim((string) ($_POST['emoji'] ?? ''));
     $role = normalize_role((string) ($_POST['role'] ?? ''));
     $email = trim((string) ($_POST['email'] ?? ''));
+    // Administrative Zusatz-Berechtigung (Checkbox, unabhaengig von der Rolle, binaeres
+    // Vollzugriffs-Flag). Nicht angehakt = Feld fehlt im POST = false (sicherer Default).
+    $isAdmin = ($_POST['isAdmin'] ?? '') === '1';
 
     if ($name === '') {
         done('error');
@@ -91,6 +97,7 @@ if ($action === 'create') {
         'icon' => mb_substr($icon !== '' ? $icon : mb_substr($name, 0, 1), 0, 4),
         'emoji' => mb_substr($emoji, 0, 16),
         'image' => store_member_image($id, null),
+        'isAdmin' => $isAdmin,
         'consentGiven' => false,
         'consentAt' => null,
         'consentSource' => null,
@@ -134,6 +141,8 @@ if ($action === 'update') {
         $entry['icon'] = mb_substr($icon !== '' ? $icon : mb_substr($entry['name'], 0, 1), 0, 4);
         $entry['emoji'] = mb_substr($emoji, 0, 16);
         $entry['image'] = store_member_image($entry['id'], $entry['image'] ?? null);
+        // Admin-Berechtigung: Checkbox; nicht angehakt = Feld fehlt = false (Entzug).
+        $entry['isAdmin'] = ($_POST['isAdmin'] ?? '') === '1';
         $entry['updatedAt'] = date('c');
         $emailToApply = $email !== '' ? $email : null;
         break;

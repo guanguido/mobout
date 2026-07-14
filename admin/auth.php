@@ -6,6 +6,15 @@
 // ausschließlich als bcrypt-Hash vor (nie im Klartext im Repo).
 declare(strict_types=1);
 
+// Fuer die Anmeldung von Member-Admins (siehe admin_attempt_login()): individuelle
+// Accounts (E-Mail + Passwort) aus accounts.json und das isAdmin-Flag aus members.json.
+// Bewusst NICHT member-auth.php einbinden - die wuerde eine zweite session_start()-/
+// Cookie-Logik mitbringen; Admin- und Mitgliederbereich teilen sich dieselbe
+// PHP-Session, nutzen aber getrennte Session-Keys (admin_authenticated vs.
+// member_authenticated), daher konfliktfrei.
+require_once __DIR__ . '/../mitglieder/accounts-lib.php';
+require_once __DIR__ . '/../mitglieder/members-lib.php';
+
 const ADMIN_USER = 'Admin';
 // bcrypt-Hash des Admin-Passworts. Neu erzeugen z. B. mit:
 //   php -r "echo password_hash('NEUES_PW', PASSWORD_BCRYPT), PHP_EOL;"
@@ -70,17 +79,65 @@ function admin_check_csrf(): void
     }
 }
 
+// Sucht ein Mitglied per E-Mail-Login zu einem Admin-Zugang: Passwort muss stimmen,
+// das Konto muss fertig eingerichtet sein (kein offenes Einmalpasswort mehr) UND das
+// Mitglied muss die administrative Zusatz-Berechtigung isAdmin = true tragen. Gibt
+// den Mitglieds-Datensatz zurueck, sonst null. Ein blosses Einmalpasswort
+// (mustChangePassword) reicht bewusst NICHT fuer den Admin-Zugang - der Member muss
+// sein Konto zuerst im Mitgliederbereich fertig einrichten (echtes Passwort setzen).
+function admin_member_admin_login(string $email, string $pass): ?array
+{
+    $acc = find_account_by_email($email);
+    if ($acc === null || empty($acc['passwordHash']) || !empty($acc['mustChangePassword'])) {
+        return null;
+    }
+    if (!password_verify($pass, (string) $acc['passwordHash'])) {
+        return null;
+    }
+    $memberId = (string) ($acc['memberId'] ?? '');
+    foreach (load_members() as $m) {
+        if ((string) ($m['id'] ?? '') === $memberId && !empty($m['isAdmin'])) {
+            return $m;
+        }
+    }
+    return null;
+}
+
+// Anmeldung im Admin-Bereich. Zwei Wege, beide fuehren zu IDENTISCHEN (vollen) Rechten:
+//  1. Der hartcodierte Backup-Admin (Benutzer "Admin" + bcrypt-Hash) - unveraenderlich
+//     und dauerhaft verfuegbar, damit ein Fehl-Entzug der isAdmin-Rechte nie alle
+//     aussperrt.
+//  2. Ein Member-Admin: gibt seine E-Mail (im Benutzerfeld) + sein Mitglieder-Passwort
+//     ein; Zugang nur, wenn sein Mitglied isAdmin = true traegt (siehe oben).
 function admin_attempt_login(string $user, string $pass): bool
 {
-    // Zeitkonstanter Benutzervergleich + password_verify gegen den bcrypt-Hash.
+    // Weg 1: hartcodierter Admin (zeitkonstanter Vergleich + password_verify).
     $userOk = hash_equals(ADMIN_USER, $user);
     $passOk = password_verify($pass, ADMIN_PASS_HASH);
     if ($userOk && $passOk) {
         session_regenerate_id(true);
         $_SESSION['admin_authenticated'] = true;
+        $_SESSION['admin_label'] = ADMIN_USER;
         return true;
     }
+
+    // Weg 2: Member-Admin per E-Mail + Mitglieder-Passwort.
+    $member = admin_member_admin_login($user, $pass);
+    if ($member !== null) {
+        session_regenerate_id(true);
+        $_SESSION['admin_authenticated'] = true;
+        $_SESSION['admin_label'] = (string) ($member['name'] ?? $user);
+        return true;
+    }
+
     return false;
+}
+
+// Anzeigename des aktuell angemeldeten Admins (nur fuer die Begruessung; die Rechte
+// sind fuer alle Admins identisch). Faellt auf "Admin" zurueck.
+function admin_current_label(): string
+{
+    return (string) ($_SESSION['admin_label'] ?? ADMIN_USER);
 }
 
 function admin_logout(): void
