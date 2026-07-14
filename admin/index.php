@@ -537,20 +537,18 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
 
             <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--color-border);">
 
-            <h3>📖 Anleitung für Mail-Clients</h3>
+            <h3>📖 E-Mail-Abruf per IMAP</h3>
 
-            <p><strong>Warum kein Forwarding mehr?</strong> Zentrale Inbox für alle Admins statt einzelner Weiterleitungen – alle sehen die gleiche Inbox, live-Sichtbarkeit, kein Durcheinander.</p>
+            <p>E-Mails werden zentral per IMAP abgerufen. Alle Admins verbinden ihren Mail-Client (Outlook, Apple Mail, Thunderbird, Gmail-App, etc.) mit diesen Konfigurationsdaten:</p>
 
-            <h4 style="margin-top: 1rem;">Mail-Clients einrichten</h4>
-            <p><strong>IMAP-Daten:</strong></p>
             <blockquote style="background: var(--light-bg); padding: 1rem; border-left: 3px solid var(--primary-color); margin: 0.5rem 0;">
-                Server: <?= h($imap_config['host']) ?> | Port: <?= h($imap_config['port']) ?> | Login: <?= h($imap_config['user']) ?>
+                <strong>Server:</strong> <?= h($imap_config['host']) ?><br>
+                <strong>Port:</strong> <?= h($imap_config['port']) ?> (SSL)<br>
+                <strong>Login:</strong> <?= h($imap_config['user']) ?><br>
+                <strong>Passwort:</strong> (siehe oben)
             </blockquote>
 
-            <p><strong>Outlook:</strong> Neue E-Mail (IMAP) → Server/Port/Login eingeben → SSL</p>
-            <p><strong>Apple Mail:</strong> Einstellungen → Accounts → Neu (IMAP) → Server/Login eingeben</p>
-            <p><strong>Thunderbird:</strong> Datei → Neu → E-Mail-Konto → Manuell bearbeiten → IMAP</p>
-            <p><strong style="color: red;">Gmail-App:</strong> Braucht Zwei-Faktor + App-Passwort (nicht normales Gmail-Passwort!)</p>
+            <p><strong>⚠️ Gmail-Nutzer:</strong> Statt normales Gmail-Passwort ein App-Passwort verwenden (siehe Gmail-Einstellungen).</p>
         </section>
 
         <!-- E-Mail-Templates: Betreff + Text der automatisch versendeten Mails -->
