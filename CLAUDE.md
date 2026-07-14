@@ -625,23 +625,21 @@ Zentrale IMAP-Inbox für alle Admins statt einzelner Weiterleitungen. Alle Admin
 
 **Admin-Panel ("E-Mail-Verwaltung"):**
 - **E-Mail-Status-Widget:** Zeigt Zahl ungelesener Mails + Betreff-Preview (letzten 5 E-Mails) + Live-Update-Button + Link zu Strato-Webmail
-- **E-Mail-Konfiguration-Panel:** IMAP-Server, Port, Login, Passwort eingeben + Test-Button + Speichern (nur wenn Verbindung ok)
+- **E-Mail-Konfiguration-Panel:** IMAP-Server/Port/Login/Passwort (Posteingang) + SMTP-Server/Port (Postausgang) eingeben + Speichern (nur wenn IMAP-Verbindung ok; SMTP wird nicht separat getestet, nur gespeichert – für vollständige Mail-Client-Einrichtung, z. B. Gmail-App, die neben IMAP auch Postausgang-Daten verlangt)
 
 **Technisch:**
-- `mitglieder/imap-lib.php` – Lib mit IMAP-Funktionen (`load_imap_config()`, `test_imap_connection()`, `get_unread_count()`, `get_mail_preview()`)
+- `mitglieder/imap-lib.php` – Lib mit IMAP-Funktionen (`load_imap_config()`, `save_imap_config()`, `test_imap_connection()`, `get_unread_count()`, `get_mail_preview()`); `load_imap_config()`/`save_imap_config()` führen sowohl die IMAP-Felder (`host`, `port`, `user`, `pass`) als auch die SMTP-Felder (`smtp_host`, `smtp_port`) gemeinsam
 - `mitglieder/data/imap-config.json` – Konfiguration (git-ignoriert, server-only)
-- `mitglieder/imap-config-seed.json` – Standardwerte (git-getrackt): `imap.strato.de:993`, Login `info@mobout.de`, Passwort leer (muss Admin eintragen)
-- `admin/imap-config.php` – Bearbeitungs-Formular (nur Admin-sichtbar)
-- `admin/imap-config-save.php` – Speichern mit Validierung (CSRF + Verbindungsprüfung)
-- `admin/index.php` – Widget + Quick-Links
+- `mitglieder/imap-config-seed.json` – Standardwerte (git-getrackt): IMAP `imap.strato.de:993`, SMTP `smtp.strato.de:465`, Login `info@mobout.de`, Passwort leer (muss Admin eintragen)
+- `admin/imap-config-save.php` – Speichern mit Validierung (CSRF + IMAP-Verbindungsprüfung)
+- `admin/index.php` – Widget + Konfigurationsformular (`#email-config-bereich`) + Quick-Links
 - `admin/data-transfer-lib.php` – Modul `imap-config` für Export/Import
 
 **Setup für Admins:**
-1. Haupt-Admin trägt IMAP-Daten ein: `imap.strato.de:993`, `info@mobout.de`, Passwort
-2. Test-Button → "Verbindung erfolgreich"
-3. Speichern → Daten in `imap-config.json`
-4. Admin teilt IMAP-Daten mit anderen Admins (z.B. per Slack): "Server: imap.strato.de, Port: 993, Login: info@mobout.de, Passwort: ..."
-5. Andere Admins tragen Daten in ihre Mail-Clients ein (Outlook, Apple Mail, Thunderbird, Gmail-App, etc.)
+1. Haupt-Admin trägt Daten ein: IMAP `imap.strato.de:993`, SMTP `smtp.strato.de:465`, Login `info@mobout.de`, Passwort
+2. Speichern → prüft IMAP-Verbindung, speichert nur bei Erfolg → Daten in `imap-config.json`
+3. Admin teilt alle Daten mit anderen Admins (z.B. per Slack): "IMAP: imap.strato.de:993, SMTP: smtp.strato.de:465, Login: info@mobout.de, Passwort: ..."
+4. Andere Admins tragen Daten in ihre Mail-Clients ein (Outlook, Apple Mail, Thunderbird, Gmail-App, etc.) – IMAP für Posteingang, SMTP für Postausgang, beide mit SSL/TLS
 
 **Gmail-Spezialfall:**
 - Gmail blockiert von Hause aus den Direct-Login via IMAP

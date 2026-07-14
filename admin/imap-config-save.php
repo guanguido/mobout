@@ -9,6 +9,8 @@ $host = trim($_POST['host'] ?? '');
 $port = (int)($_POST['port'] ?? 0);
 $user = trim($_POST['user'] ?? '');
 $pass = trim($_POST['pass'] ?? '');
+$smtpHost = trim($_POST['smtp_host'] ?? '');
+$smtpPort = (int)($_POST['smtp_port'] ?? 465);
 
 if (empty($host) || empty($port) || empty($user) || empty($pass)) {
   header('Location: index.php?msg=imap-config-error&info=' . rawurlencode('Alle Felder erforderlich') . '#email-config-bereich');
@@ -26,6 +28,8 @@ save_imap_config([
   'port' => $port,
   'user' => $user,
   'pass' => $pass,
+  'smtp_host' => $smtpHost,
+  'smtp_port' => $smtpPort,
 ]);
 
 header('Location: index.php?msg=imap-config-saved#email-config-bereich');

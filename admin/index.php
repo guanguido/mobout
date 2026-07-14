@@ -529,6 +529,16 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label for="smtp_host">SMTP-Server (Postausgang):</label>
+                    <input type="text" id="smtp_host" name="smtp_host" value="<?= h($imap_config['smtp_host'] ?? '') ?>" placeholder="smtp.strato.de">
+                </div>
+
+                <div class="form-group">
+                    <label for="smtp_port">SMTP-Port:</label>
+                    <input type="number" id="smtp_port" name="smtp_port" value="<?= h($imap_config['smtp_port'] ?? 465) ?>" placeholder="465">
+                </div>
+
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">💾 Konfiguration speichern</button>
                 </div>
@@ -543,10 +553,13 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
             <p>E-Mails werden zentral per IMAP abgerufen. Alle Admins verbinden ihren Mail-Client (Outlook, Apple Mail, Thunderbird, Gmail-App, etc.) mit diesen Konfigurationsdaten:</p>
 
             <blockquote style="background: var(--light-bg); padding: 1rem; border-left: 3px solid var(--primary-color); margin: 0.5rem 0;">
-                <strong>Server:</strong> <?= h($imap_config['host']) ?><br>
-                <strong>Port:</strong> <?= h($imap_config['port']) ?> (SSL)<br>
-                <strong>Login:</strong> <?= h($imap_config['user']) ?><br>
-                <strong>Passwort:</strong> (siehe oben)
+                <strong>Posteingang (IMAP):</strong><br>
+                Server: <?= h($imap_config['host']) ?> · Port: <?= h($imap_config['port']) ?> (SSL/TLS)<br>
+                Login: <?= h($imap_config['user']) ?> · Passwort: (siehe oben)<br>
+                <br>
+                <strong>Postausgang (SMTP):</strong><br>
+                Server: <?= h($imap_config['smtp_host'] ?? '') ?> · Port: <?= h($imap_config['smtp_port'] ?? 465) ?> (SSL/TLS)<br>
+                Login: <?= h($imap_config['user']) ?> · Passwort: (siehe oben)
             </blockquote>
 
             <p><strong>Fallback:</strong> <a href="https://webmail.strato.de" target="_blank">Strato-Webmail öffnen</a> (im Browser, ohne Mail-Client-Setup).</p>

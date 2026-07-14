@@ -2,5 +2,7 @@
   "host": "imap.strato.de",
   "port": 993,
   "user": "info@mobout.de",
-  "pass": ""
+  "pass": "",
+  "smtp_host": "smtp.strato.de",
+  "smtp_port": 465
 }

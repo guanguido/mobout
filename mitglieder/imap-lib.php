@@ -15,6 +15,8 @@ function load_imap_config() {
     'port' => 993,
     'user' => 'info@mobout.de',
     'pass' => '',
+    'smtp_host' => 'smtp.strato.de',
+    'smtp_port' => 465,
   ];
 }
 
@@ -24,6 +26,8 @@ function save_imap_config($config) {
     'port' => (int)($config['port'] ?? 993),
     'user' => trim($config['user'] ?? ''),
     'pass' => trim($config['pass'] ?? ''),
+    'smtp_host' => trim($config['smtp_host'] ?? ''),
+    'smtp_port' => (int)($config['smtp_port'] ?? 465),
   ];
   file_put_contents(IMAP_CONFIG_FILE, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
 }
