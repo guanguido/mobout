@@ -97,12 +97,22 @@ function get_mail_preview($host, $port, $user, $pass, $limit = 5) {
     return [];
   }
 
-  $total = @imap_num_msg($stream);
-  $start = max(1, $total - $limit + 1);
+  $unseen_uids = @imap_search($stream, 'UNSEEN', SE_UID);
+  if ($unseen_uids === false) {
+    @imap_close($stream);
+    return [];
+  }
 
+  $unseen_uids = array_reverse($unseen_uids);
   $mails = [];
-  for ($i = $total; $i >= $start && count($mails) < $limit; $i--) {
-    $header = @imap_headerinfo($stream, $i);
+
+  foreach ($unseen_uids as $uid) {
+    if (count($mails) >= $limit) {
+      break;
+    }
+
+    $msg_num = @imap_msgno($stream, $uid);
+    $header = @imap_headerinfo($stream, $msg_num);
     if ($header === false) {
       continue;
     }
