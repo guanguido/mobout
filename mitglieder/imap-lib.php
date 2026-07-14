@@ -117,7 +117,14 @@ function get_mail_preview($host, $port, $user, $pass, $limit = 5) {
       continue;
     }
 
-    $from = isset($header->from[0]) ? $header->from[0]->mailbox . '@' . $header->from[0]->host : '(unbekannt)';
+    $from = '(unbekannt)';
+    if (isset($header->from[0])) {
+      $from = $header->from[0]->mailbox . '@' . $header->from[0]->host;
+    } elseif (isset($header->reply_to[0])) {
+      $from = $header->reply_to[0]->mailbox . '@' . $header->reply_to[0]->host;
+    } elseif (isset($header->sender[0])) {
+      $from = $header->sender[0]->mailbox . '@' . $header->sender[0]->host;
+    }
     $subject = isset($header->subject) ? $header->subject : '(kein Betreff)';
     $subject = mb_decode_mimeheader($subject);
 
