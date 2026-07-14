@@ -79,8 +79,7 @@ function save_role_permissions(array $posted): void
     }
     file_put_contents(
         ROLE_PERMISSIONS_DATA_FILE,
-        json_encode($clean, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-        LOCK_EX
+        json_encode($clean, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
     );
 }
 
