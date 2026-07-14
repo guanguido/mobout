@@ -480,7 +480,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                                 <tr>
                                     <td>
                                         <strong><?= h($mail['subject']) ?></strong><br>
-                                        <small>von <?= h($mail['from']) ?> · <?= h($mail['date']) ?></small>
+                                        <small><?= h($mail['date']) ?></small>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
