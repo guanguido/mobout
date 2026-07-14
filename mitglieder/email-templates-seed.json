@@ -1,18 +1,18 @@
 {
   "welcome": {
-    "subject": "Willkommen im MobOut-Mitgliederbereich",
+    "subject": "[MobOut Willkommen] Willkommen im MobOut-Mitgliederbereich",
     "body": "Hallo {{NAME}},\n\nschön, dass du dabei bist! Für dich wurde ein persönlicher Zugang zum MobOut-Mitgliederbereich angelegt.\n\nDein Login-Name ist deine E-Mail-Adresse: {{EMAIL}}\n\nSo richtest du dein Passwort ein:\n1. Öffne {{RESET_URL}}\n2. Deine E-Mail-Adresse ist dort schon eingetragen – klicke einfach auf \"Einmalpasswort zusenden\".\n3. Du bekommst ein Einmalpasswort per Mail, mit dem du dich anmeldest (oder klickst direkt den Link darin).\n4. Danach legst du dein eigenes Passwort fest.\n\nPetri Heil und bis bald!\nDeine MobOut-Crew"
   },
   "otp": {
-    "subject": "Dein Einmalpasswort für den MobOut-Mitgliederbereich",
+    "subject": "[MobOut Passwort-Reset] Dein Einmalpasswort für den MobOut-Mitgliederbereich",
     "body": "Hallo {{NAME}},\n\ndu (oder jemand mit deiner E-Mail-Adresse) hat ein neues Passwort für den MobOut-Mitgliederbereich angefordert.\n\nKlicke auf diesen Link, um dich direkt anzumelden:\n{{MAGIC_LINK}}\n\nFalls der Link nicht funktioniert, kannst du dich auch manuell anmelden unter {{MEMBER_AREA_URL}} mit diesem Einmalpasswort: {{ONETIMEPASSWORD}}\nBitte ändere dein Passwort direkt nach der Anmeldung.\n\nWenn du das nicht angefordert hast, kannst du diese Mail einfach ignorieren.\n\nDeine MobOut-Crew"
   },
   "password-changed": {
-    "subject": "Dein Passwort wurde geändert",
+    "subject": "[MobOut Passwort-Änderung] Dein Passwort wurde geändert",
     "body": "Hallo {{NAME}},\n\ndein Passwort für den MobOut-Mitgliederbereich wurde am {{CHANGE_DATE}} geändert.\n\nWarst du das nicht? Dann melde dich bitte umgehend bei info@mobout.de.\n\nDeine MobOut-Crew"
   },
   "consent-notice": {
-    "subject": "Neue Anzeige-Zustimmung: {{NAME}}",
+    "subject": "[MobOut Zustimmungs-Audit] Neue Anzeige-Zustimmung: {{NAME}}",
     "body": "Zur Info und fürs Audit:\n\nEin Mitglied hat der öffentlichen Anzeige auf mobout.de zugestimmt.\n\nName:      {{NAME}}\nE-Mail:    {{EMAIL}}\nZeitpunkt: {{CONSENT_DATE}}\nQuelle:    {{CONSENT_SOURCE}}\n\nDiese Nachricht wurde automatisch erzeugt."
   }
 }
