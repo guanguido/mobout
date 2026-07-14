@@ -279,9 +279,6 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
             </div>
         </div>
 
-        <!-- E-Mail-Konfiguration -->
-        <?php include __DIR__ . '/imap-config.php'; ?>
-
         <!-- Mitglieder-Verwaltung -->
         <section class="panel" id="mitglieder-bereich">
             <h2>Mitglieder</h2>
@@ -496,6 +493,61 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                     <a href="#email-config-bereich" class="btn btn-secondary">⚙️ E-Mail-Konfiguration</a>
                 </div>
             <?php endif; ?>
+        </section>
+
+        <!-- E-Mail-Konfiguration -->
+        <section class="panel" id="email-config-bereich">
+            <h2>📧 E-Mail-Konfiguration</h2>
+            <p class="hint">Konfigurieren Sie die IMAP-Zugangsdaten für info@mobout.de. Diese Daten werden nur hier sichtbar und nicht öffentlich ausgeliefert.</p>
+
+            <form method="POST" action="imap-config-save.php" class="admin-form">
+                <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
+
+                <?php $imap_config = load_imap_config(); ?>
+
+                <div class="form-group">
+                    <label for="host">IMAP-Server:</label>
+                    <input type="text" id="host" name="host" value="<?= h($imap_config['host'] ?? '') ?>" placeholder="imap.strato.de" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="port">Port:</label>
+                    <input type="number" id="port" name="port" value="<?= h($imap_config['port'] ?? 993) ?>" placeholder="993" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="user">Login (E-Mail):</label>
+                    <input type="email" id="user" name="user" value="<?= h($imap_config['user'] ?? '') ?>" placeholder="info@mobout.de" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="pass">Passwort:</label>
+                    <input type="password" id="pass" name="pass" value="<?= h($imap_config['pass'] ?? '') ?>" placeholder="••••••••" required>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">💾 Konfiguration speichern</button>
+                </div>
+
+                <p class="admin-info" style="margin-top: 1rem;">Beim Speichern wird die Verbindung automatisch geprüft. Die Konfiguration wird nur gespeichert, wenn die Verbindung funktioniert.</p>
+            </form>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--color-border);">
+
+            <h3>📖 Anleitung für Mail-Clients</h3>
+
+            <p><strong>Warum kein Forwarding mehr?</strong> Zentrale Inbox für alle Admins statt einzelner Weiterleitungen – alle sehen die gleiche Inbox, live-Sichtbarkeit, kein Durcheinander.</p>
+
+            <h4 style="margin-top: 1rem;">Mail-Clients einrichten</h4>
+            <p><strong>IMAP-Daten:</strong></p>
+            <blockquote style="background: var(--light-bg); padding: 1rem; border-left: 3px solid var(--primary-color); margin: 0.5rem 0;">
+                Server: <?= h($imap_config['host']) ?> | Port: <?= h($imap_config['port']) ?> | Login: <?= h($imap_config['user']) ?>
+            </blockquote>
+
+            <p><strong>Outlook:</strong> Neue E-Mail (IMAP) → Server/Port/Login eingeben → SSL</p>
+            <p><strong>Apple Mail:</strong> Einstellungen → Accounts → Neu (IMAP) → Server/Login eingeben</p>
+            <p><strong>Thunderbird:</strong> Datei → Neu → E-Mail-Konto → Manuell bearbeiten → IMAP</p>
+            <p><strong style="color: red;">Gmail-App:</strong> Braucht Zwei-Faktor + App-Passwort (nicht normales Gmail-Passwort!)</p>
         </section>
 
         <!-- E-Mail-Templates: Betreff + Text der automatisch versendeten Mails -->
