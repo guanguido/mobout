@@ -461,9 +461,22 @@ Abgrenzungen:
   den Namen. `admin/auth.php` bindet dazu `accounts-lib.php` + `members-lib.php` per `require_once` ein,
   **nicht** `member-auth.php` (die brächte eine zweite `session_start()`-/Cookie-Logik; Admin- und
   Mitgliederbereich teilen dieselbe PHP-Session, nutzen aber getrennte Session-Keys).
+- **Single-Sign-On aus dem Mitgliederbereich:** Admin- und Mitgliederbereich teilen dieselbe
+  PHP-Session (gleiches Cookie, `/`-Pfad). Ist ein Member-Admin bereits im Mitgliederbereich
+  eingeloggt, wird er **ohne zweiten Login** auch im Admin-Bereich als Admin erkannt –
+  `admin_is_logged_in()` prüft neben `$_SESSION['admin_authenticated']` zusätzlich
+  `admin_session_member_admin()`: existiert eine Mitglieder-Session (`member_authenticated` +
+  `member_id`), deren Konto fertig eingerichtet ist (kein `mustChangePassword`) und deren Mitglied
+  `isAdmin === true` trägt. Diese Prüfung läuft **bei jedem Request frisch** gegen `members.json`,
+  daher wirkt ein späterer Entzug von `isAdmin` sofort (kein „eingefrorener" Admin-Status). Deshalb
+  öffnet **sowohl** der neue Link „Admin-Bereich →" im Header des Mitgliederbereichs (nur für
+  Member-Admins sichtbar) **als auch** der versteckte `·`-Footer-Link auf `index.html` für einen so
+  angemeldeten Nutzer direkt das Admin-Dashboard, ohne erneute Passwortabfrage. Der explizite
+  Admin-Login (E-Mail + Passwort auf `/admin/`) bleibt zusätzlich möglich, z. B. wenn man nicht
+  ohnehin schon im Mitgliederbereich eingeloggt ist.
 - **Einmalpasswort genügt nicht:** Solange ein Konto `mustChangePassword` trägt (frisch angelegt, nur
-  Einmalpasswort), ist **kein** Admin-Login möglich. Der Member muss sein Konto zuerst im
-  Mitgliederbereich fertig einrichten (echtes Passwort setzen).
+  Einmalpasswort), ist **kein** Admin-Login möglich (weder explizit noch per SSO). Der Member muss sein
+  Konto zuerst im Mitgliederbereich fertig einrichten (echtes Passwort setzen).
 - **Vergabe/Entzug:** ausschließlich im Admin-Bereich über die Checkbox „Admin-Berechtigung" in den
   Mitglieder-Formularen (`admin/index.php` → `admin/members-save.php`, `create`/`update`). Standardmäßig
   hat kein neu angelegtes Mitglied die Berechtigung; Abwählen entzieht sie. Ein Member-Admin darf sie –

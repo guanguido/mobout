@@ -335,6 +335,9 @@ $memberRole = (string) ($memberSelf['role'] ?? '');
             </div>
             <nav>
                 <a href="/">&larr; Zur Hauptseite</a>
+                <?php if (!empty($memberSelf['isAdmin'])): ?>
+                    <a href="/admin/">Admin-Bereich &rarr;</a>
+                <?php endif; ?>
                 <a href="index.php?logout=1">Abmelden</a>
             </nav>
         </div>

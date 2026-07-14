@@ -49,9 +49,41 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Single-Sign-On aus dem Mitgliederbereich: Admin- und Mitgliederbereich teilen sich
+// dieselbe PHP-Session (gleiches Cookie). Ist im Mitgliederbereich (member-auth.php)
+// jemand eingeloggt, dessen Mitglied isAdmin = true traegt und dessen Konto fertig
+// eingerichtet ist (kein offenes Einmalpasswort), gilt er OHNE zweiten Login auch im
+// Admin-Bereich als Admin. Wird bei jedem Request frisch aus members.json geprueft -
+// ein spaeterer Entzug von isAdmin wirkt daher sofort. Gibt den Mitglieds-Datensatz
+// zurueck, sonst null. Ergebnis wird pro Request gecacht (mehrfach aufgerufen).
+function admin_session_member_admin(): ?array
+{
+    static $computed = false;
+    static $result = null;
+    if ($computed) {
+        return $result;
+    }
+    $computed = true;
+    if (empty($_SESSION['member_authenticated']) || empty($_SESSION['member_id'])) {
+        return $result; // null
+    }
+    $memberId = (string) $_SESSION['member_id'];
+    $acc = find_account_by_member_id($memberId);
+    if ($acc === null || !empty($acc['mustChangePassword'])) {
+        return $result; // null - Konto noch nicht fertig eingerichtet
+    }
+    foreach (load_members() as $m) {
+        if ((string) ($m['id'] ?? '') === $memberId && !empty($m['isAdmin'])) {
+            $result = $m;
+            break;
+        }
+    }
+    return $result;
+}
+
 function admin_is_logged_in(): bool
 {
-    return !empty($_SESSION['admin_authenticated']);
+    return !empty($_SESSION['admin_authenticated']) || admin_session_member_admin() !== null;
 }
 
 function require_admin(): void
@@ -134,10 +166,16 @@ function admin_attempt_login(string $user, string $pass): bool
 }
 
 // Anzeigename des aktuell angemeldeten Admins (nur fuer die Begruessung; die Rechte
-// sind fuer alle Admins identisch). Faellt auf "Admin" zurueck.
+// sind fuer alle Admins identisch). Bei explizitem Admin-Login greift das beim Login
+// gesetzte Label; kommt der Zugang nur aus der Mitglieder-Session (Single-Sign-On),
+// der Name des Mitglieds. Faellt auf "Admin" zurueck.
 function admin_current_label(): string
 {
-    return (string) ($_SESSION['admin_label'] ?? ADMIN_USER);
+    if (!empty($_SESSION['admin_authenticated'])) {
+        return (string) ($_SESSION['admin_label'] ?? ADMIN_USER);
+    }
+    $m = admin_session_member_admin();
+    return $m !== null ? (string) ($m['name'] ?? ADMIN_USER) : ADMIN_USER;
 }
 
 function admin_logout(): void
