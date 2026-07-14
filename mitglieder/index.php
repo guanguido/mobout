@@ -206,6 +206,7 @@ $memberRoleLabels = ['team' => 'Team', 'supporter' => 'Supporter / Auch dabei', 
 
 // Rollenbasierte Berechtigungen (Admin-konfigurierbar, siehe role-permissions-lib.php).
 require_once __DIR__ . '/role-permissions-lib.php';
+require_once __DIR__ . '/navionics-lib.php';
 $memberRole = (string) ($memberSelf['role'] ?? '');
 ?>
 <!DOCTYPE html>
@@ -386,14 +387,14 @@ $memberRole = (string) ($memberSelf['role'] ?? '');
         </div>
 
         <?php if (role_has_permission($memberRole, 'navionics_view')): ?>
+        <?php $nav = load_navionics(); ?>
         <section class="account-section" id="navionics-zugangsdaten">
             <h2>Navionics Zugangsdaten</h2>
             <dl class="account-info">
-                <dt>Login</dt><dd>andre.schlieper@googlemail.com</dd>
-                <dt>Passwort</dt><dd>J$C6qJ$C6q</dd>
-                <dt>App</dt><dd>Navionics Boating HD</dd>
-                <dt>Karten</dt><dd>Navionics+ Central&amp;West Europe, Baltic Sea (NMEU644L)</dd>
-                <dt>Läuft ab</dt><dd>14.05.2027</dd>
+                <?php foreach (navionics_field_defs() as $key => $label): ?>
+                    <dt><?= htmlspecialchars($label) ?></dt>
+                    <dd><?= htmlspecialchars($nav[$key] ?? '') ?></dd>
+                <?php endforeach; ?>
             </dl>
         </section>
         <?php endif; ?>

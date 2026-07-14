@@ -13,6 +13,7 @@ require_once __DIR__ . '/../mitglieder/members-lib.php';
 require_once __DIR__ . '/../mitglieder/expeditions-lib.php';
 require_once __DIR__ . '/../mitglieder/accounts-lib.php';
 require_once __DIR__ . '/../mitglieder/email-templates-lib.php';
+require_once __DIR__ . '/../mitglieder/navionics-lib.php';
 require_once __DIR__ . '/../mitglieder/role-permissions-lib.php';
 require_once __DIR__ . '/../mitglieder/visitor-counter-lib.php';
 
@@ -397,6 +398,16 @@ function data_transfer_export_email_templates(): array
     ];
 }
 
+function data_transfer_export_navionics(): array
+{
+    $data = load_navionics();
+    return [
+        'files' => ['navionics/navionics.json' => json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)],
+        'images' => [],
+        'count' => 1,
+    ];
+}
+
 function data_transfer_export_role_permissions(): array
 {
     $data = load_role_permissions();
@@ -585,6 +596,26 @@ function data_transfer_import_email_templates(ZipArchive $zip): array
     return ['ok' => true, 'summary' => 'E-Mail-Templates importiert.'];
 }
 
+function data_transfer_import_navionics(ZipArchive $zip): array
+{
+    $idx = $zip->locateName('navionics/navionics.json');
+    if ($idx === false) {
+        return ['ok' => false, 'summary' => 'Navionics: Datei nicht im Archiv gefunden, übersprungen.'];
+    }
+    $json = $zip->getFromIndex($idx);
+    $data = $json !== false ? json_decode($json, true) : null;
+    if (!is_array($data)) {
+        return ['ok' => false, 'summary' => 'Navionics: Datei ungültig, Import abgebrochen.'];
+    }
+
+    if (data_transfer_backup_file('navionics', navionics_data_file())) {
+        data_transfer_prune_backups('navionics');
+    }
+
+    save_navionics($data);
+    return ['ok' => true, 'summary' => 'Navionics-Zugangsdaten importiert.'];
+}
+
 function data_transfer_import_role_permissions(ZipArchive $zip): array
 {
     $idx = $zip->locateName('role-permissions/role-permissions.json');
@@ -689,6 +720,11 @@ function data_transfer_modules(): array
             'label' => 'E-Mail-Templates',
             'export' => 'data_transfer_export_email_templates',
             'import' => 'data_transfer_import_email_templates',
+        ],
+        'navionics' => [
+            'label' => 'Navionics Zugangsdaten',
+            'export' => 'data_transfer_export_navionics',
+            'import' => 'data_transfer_import_navionics',
         ],
         'role-permissions' => [
             'label' => 'Rollen-Berechtigungen',

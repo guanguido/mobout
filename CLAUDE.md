@@ -288,6 +288,27 @@ gleiches `data/`-Seed-Muster wie MOTD/Expeditionen.
   bei künftigen Seed-Aktualisierungen, da der Seed-Inhalt nicht hineinkopiert, sondern der
   Override entfernt wird).
 
+## Navionics Zugangsdaten (dynamisch)
+
+Gemeinsame Zugangsdaten für die Boating HD App, admin-editierbar statt hardcodiert.
+Folgt dem gleichen `data/`-Seed-Muster wie E-Mail-Templates (multi-field JSON mit
+Registry, Seed-Fallback, load/save/reset):
+
+- **Speicher:** `mitglieder/data/navionics.json` (git-ignoriert, server-only), Seed-Fallback
+  `mitglieder/navionics-seed.json` (git-getrackt, aktuelle Default-Werte: Login, Passwort, App,
+  Karten, Läuft ab).
+- **Lib:** `mitglieder/navionics-lib.php` mit der Registry `navionics_field_defs()` (fünf Felder),
+  `load_navionics()` (Daten-vor-Seed-Fallback), `save_navionics()`, `reset_navionics()`.
+- **Admin-UI:** Panel „Navionics Zugangsdaten" in `admin/index.php` (`#navionics-bereich`) –
+  ein Textfeld je Feld (Login, Passwort, App, Karten, Läuft ab). Speichert über
+  `admin/navionics-save.php`. Button „Auf Standard zurücksetzen" revert zur Seed-Datei.
+- **Member-Bereich:** `mitglieder/index.php` lädt die Daten dynamisch via `load_navionics()`,
+  gating bleibt `navionics_view`-Permission (read-only, kein Mitglied kann bearbeiten).
+- **Export/Import:** Modul `navionics` in `admin/data-transfer-lib.php`s `data_transfer_modules()`
+  -Registry, exportiert/importiert `navionics.json` im ZIP-Bundle.
+- **Abo-Läuft-ab:** Aktuell 14.05.2027 – bei Verlängerung/Änderung das Feld im Admin-Panel
+  aktualisieren.
+
 ## Nachricht des Tages (MOTD)
 
 Kleines PHP-Testfeature, um den Mechanismus "Mitglied editiert im geschützten Bereich → Inhalt
@@ -620,7 +641,7 @@ abweichender Stände.
 
 - **Architektur:** `admin/data-transfer-lib.php` definiert eine zentrale Modul-Registry
   (`data_transfer_modules()`) mit den Modulen `motd`, `members`, `expeditions`, `accounts`,
-  `email-templates`, `role-permissions`, `consent-log`, `visitor-counter`. Jedes Modul hat eine `export`- und eine `import`-Funktion;
+  `email-templates`, `navionics`, `role-permissions`, `consent-log`, `visitor-counter`. Jedes Modul hat eine `export`- und eine `import`-Funktion;
   Export-/Import-Endpunkt sowie die Admin-UI iterieren generisch über die Registry (jedes Modul im
   UI einzeln per Checkbox wähl-/abwählbar). **Erweiterbar:** ein künftiger weiterer dynamischer
   Datentyp nach demselben `data/`-Prinzip wird durch zwei neue Funktionen plus einen weiteren
@@ -637,7 +658,7 @@ abweichender Stände.
   enthaltene Module) sowie je Modul der JSON-Datei und den referenzierten Bildern/Dateien
   (`members/members.json` + `members/images/...`, `expeditions/expeditions.json` +
   `expeditions/images/...`, `motd/motd.txt`, `accounts/accounts.json`,
-  `email-templates/email-templates.json`, `role-permissions/role-permissions.json`,
+  `email-templates/email-templates.json`, `navionics/navionics.json`, `role-permissions/role-permissions.json`,
   `consent-log/<datei>.json` je Zustimmung, `visitor-counter/visitor-counter.json`).
 - **Export:** `admin/data-transfer-export.php` (Session- + CSRF-geschützt) baut das ZIP aus allen
   Modulen und liefert es als Download (`mobout-data-<host>-<Zeitstempel>.zip`).

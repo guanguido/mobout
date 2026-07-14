@@ -3,6 +3,7 @@ require __DIR__ . '/auth.php';
 require_once __DIR__ . '/../mitglieder/members-lib.php';
 require_once __DIR__ . '/../mitglieder/accounts-lib.php';
 require_once __DIR__ . '/../mitglieder/email-templates-lib.php';
+require_once __DIR__ . '/../mitglieder/navionics-lib.php';
 require_once __DIR__ . '/../mitglieder/role-permissions-lib.php';
 require_once __DIR__ . '/../mitglieder/visitor-counter-lib.php';
 require_once __DIR__ . '/data-transfer-lib.php';
@@ -45,6 +46,7 @@ $msgMap = [
     'consent-granted' => 'Zustimmung gespeichert.',
     'templates-saved' => 'E-Mail-Templates gespeichert.',
     'template-reset' => 'Template auf Standard zurückgesetzt.',
+    'navionics-saved' => 'Navionics-Zugangsdaten gespeichert.',
     'permissions-saved' => 'Berechtigungen gespeichert.',
     'permissions-reset' => 'Berechtigungen auf Standard zurückgesetzt.',
     'error' => 'Aktion fehlgeschlagen – bitte Eingaben prüfen.',
@@ -255,6 +257,11 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                 <p><a href="#email-templates-bereich">Templates bearbeiten &rarr;</a></p>
             </div>
             <div class="card">
+                <h2>Navionics Zugangsdaten</h2>
+                <p>Gemeinsame Account-Anmeldedaten für die Boating HD App.</p>
+                <p><a href="#navionics-bereich">Bearbeiten &rarr;</a></p>
+            </div>
+            <div class="card">
                 <h2>Berechtigungen</h2>
                 <p>Festlegen, was Team, Supporter und Anwärter im Mitgliederbereich sehen und ändern dürfen (MOTD, Expeditionen, Navionics, Instagram, eigenes Konto).</p>
                 <p><a href="#berechtigungen-bereich">Berechtigungen verwalten &rarr;</a></p>
@@ -456,6 +463,23 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                     </details>
                 <?php endforeach; ?>
                 <button type="submit">Templates speichern</button>
+            </form>
+        </section>
+
+        <!-- Navionics Zugangsdaten -->
+        <section class="panel" id="navionics-bereich">
+            <h2>Navionics Zugangsdaten</h2>
+            <p class="hint">Bearbeite die Zugangsdaten des gemeinsamen Navionics-Accounts (Boating HD App).</p>
+            <form method="post" action="navionics-save.php">
+                <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
+                <?php $navionics = load_navionics(); ?>
+                <?php foreach (navionics_field_defs() as $key => $label): ?>
+                    <label><?= h($label) ?><input type="text" name="navionics[<?= h($key) ?>]" value="<?= h($navionics[$key] ?? '') ?>" style="width:100%;"></label>
+                <?php endforeach; ?>
+                <p>
+                    <button type="submit">Speichern</button>
+                    <button type="submit" name="reset_key" value="1" formnovalidate class="danger" onclick="return confirm('Auf Standard-Werte zurücksetzen?');">Auf Standard zurücksetzen</button>
+                </p>
             </form>
         </section>
 
