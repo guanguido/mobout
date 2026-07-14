@@ -6,6 +6,7 @@ require_once __DIR__ . '/../mitglieder/email-templates-lib.php';
 require_once __DIR__ . '/../mitglieder/navionics-lib.php';
 require_once __DIR__ . '/../mitglieder/role-permissions-lib.php';
 require_once __DIR__ . '/../mitglieder/visitor-counter-lib.php';
+require_once __DIR__ . '/../mitglieder/imap-lib.php';
 require_once __DIR__ . '/data-transfer-lib.php';
 
 // Logout
@@ -267,11 +268,19 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                 <p><a href="#berechtigungen-bereich">Berechtigungen verwalten &rarr;</a></p>
             </div>
             <div class="card">
+                <h2>E-Mail-Verwaltung</h2>
+                <p>IMAP-Verbindung zur info@mobout.de konfigurieren, Status der ungelesenen Mails anzeigen, Zugangsdaten für alle Admins bereitstellen.</p>
+                <p><a href="#email-status-bereich">E-Mail-Status ansehen &rarr;</a> | <a href="#email-config-bereich">Konfiguration &rarr;</a></p>
+            </div>
+            <div class="card">
                 <h2>Datenübertragung</h2>
-                <p>Alle dynamischen Daten (MOTD, Mitglieder, Expeditionen, Accounts, Templates, Berechtigungen, Zustimmungs-Audit, Besucherzähler) als ZIP-Bundle exportieren oder importieren &ndash; für Backup, Staging-Production-Übertragung und Migrationen.</p>
+                <p>Alle dynamischen Daten (MOTD, Mitglieder, Expeditionen, Accounts, Templates, Berechtigungen, Zustimmungs-Audit, Besucherzähler, IMAP-Config) als ZIP-Bundle exportieren oder importieren &ndash; für Backup, Staging-Production-Übertragung und Migrationen.</p>
                 <p><a href="#data-bereich">Daten übertragen &rarr;</a></p>
             </div>
         </div>
+
+        <!-- E-Mail-Konfiguration -->
+        <?php include __DIR__ . '/imap-config.php'; ?>
 
         <!-- Mitglieder-Verwaltung -->
         <section class="panel" id="mitglieder-bereich">
@@ -442,6 +451,51 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                     <tr><th>Zuletzt aktualisiert</th><td><?= $visitorCounter['updatedAt'] ? h((string) $visitorCounter['updatedAt']) : '—' ?></td></tr>
                 </tbody>
             </table>
+        </section>
+
+        <!-- E-Mail-Status: IMAP-Verbindung + ungelesene Mails -->
+        <section class="panel" id="email-status-bereich">
+            <h2>📧 E-Mail-Status</h2>
+            <p class="hint">Übersicht der ungelesenen E-Mails im Postfach info@mobout.de. Alle Admins können sich mit den IMAP-Zugangsdaten in ihre Mail-Clients verbinden.</p>
+            <?php
+                $imap_config = load_imap_config();
+                $unread_count = get_unread_count($imap_config['host'], $imap_config['port'], $imap_config['user'], $imap_config['pass']);
+                $mail_preview = [];
+                if ($unread_count >= 0) {
+                    $mail_preview = get_mail_preview($imap_config['host'], $imap_config['port'], $imap_config['user'], $imap_config['pass'], 5);
+                }
+            ?>
+            <?php if ($unread_count < 0): ?>
+                <div class="error-message">
+                    ❌ <strong>Verbindung fehlgeschlagen</strong><br>
+                    Die IMAP-Verbindung zu <?= h($imap_config['host']) ?> konnte nicht hergestellt werden. Bitte prüfe die <a href="#email-config-bereich">E-Mail-Konfiguration</a> oder kontaktiere den Admin.
+                </div>
+            <?php else: ?>
+                <div class="success-message">
+                    ✅ <strong><?= $unread_count ?> ungelesene E-Mail<?= $unread_count !== 1 ? 's' : '' ?></strong><br>
+                    <small>Zuletzt geprüft: gerade eben</small>
+                </div>
+                <?php if (count($mail_preview) > 0): ?>
+                    <h4 style="margin-top: 1.5rem;">Letzte E-Mails:</h4>
+                    <table class="consent-table">
+                        <tbody>
+                            <?php foreach ($mail_preview as $mail): ?>
+                                <tr>
+                                    <td>
+                                        <strong><?= h($mail['subject']) ?></strong><br>
+                                        <small>von <?= h($mail['from']) ?> · <?= h($mail['date']) ?></small>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+                <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button class="btn btn-secondary" onclick="location.reload();">🔄 Jetzt prüfen</button>
+                    <a href="https://webmail.strato.de" target="_blank" class="btn btn-secondary">📧 Strato-Webmail öffnen</a>
+                    <a href="#email-config-bereich" class="btn btn-secondary">⚙️ E-Mail-Konfiguration</a>
+                </div>
+            <?php endif; ?>
         </section>
 
         <!-- E-Mail-Templates: Betreff + Text der automatisch versendeten Mails -->

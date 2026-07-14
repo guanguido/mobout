@@ -741,6 +741,11 @@ function data_transfer_modules(): array
             'export' => 'data_transfer_export_visitor_counter',
             'import' => 'data_transfer_import_visitor_counter',
         ],
+        'imap-config' => [
+            'label' => 'IMAP-Konfiguration (E-Mail)',
+            'export' => 'data_transfer_export_imap_config',
+            'import' => 'data_transfer_import_imap_config',
+        ],
     ];
 }
 
@@ -752,4 +757,27 @@ function data_transfer_build_manifest(array $moduleIds): array
         'host' => $_SERVER['HTTP_HOST'] ?? 'unknown',
         'modules' => array_values($moduleIds),
     ];
+}
+
+// IMAP-Konfiguration Export/Import
+function data_transfer_export_imap_config(): array
+{
+    require_once __DIR__ . '/../mitglieder/imap-lib.php';
+    $config = load_imap_config();
+    return [
+        'files' => [
+            'imap-config/imap-config.json' => json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n",
+        ],
+    ];
+}
+
+function data_transfer_import_imap_config(array $data): void
+{
+    require_once __DIR__ . '/../mitglieder/imap-lib.php';
+    if (isset($data['files']['imap-config/imap-config.json'])) {
+        $config = json_decode($data['files']['imap-config/imap-config.json'], true);
+        if (is_array($config)) {
+            save_imap_config($config);
+        }
+    }
 }

@@ -619,6 +619,60 @@ der öffentlichen Website. Folgt demselben `data/`-Modul-Muster wie MOTD/Expedit
   Näherung für „eindeutig" (mehrere Personen hinter derselben IP am selben Tag können unterzählt
   werden; dasselbe Gerät zählt an unterschiedlichen Tagen erneut).
 
+## E-Mail-Verwaltung (Admin)
+
+Zentrale IMAP-Inbox für alle Admins statt einzelner Weiterleitungen. Alle Admins können sich mit den gleichen IMAP-Zugangsdaten in ihre Mail-Clients connecten und sehen die gleiche Inbox.
+
+**Admin-Panel ("E-Mail-Verwaltung"):**
+- **E-Mail-Status-Widget:** Zeigt Zahl ungelesener Mails + Betreff-Preview (letzten 5 E-Mails) + Live-Update-Button + Link zu Strato-Webmail
+- **E-Mail-Konfiguration-Panel:** IMAP-Server, Port, Login, Passwort eingeben + Test-Button + Speichern (nur wenn Verbindung ok)
+
+**Technisch:**
+- `mitglieder/imap-lib.php` – Lib mit IMAP-Funktionen (`load_imap_config()`, `test_imap_connection()`, `get_unread_count()`, `get_mail_preview()`)
+- `mitglieder/data/imap-config.json` – Konfiguration (git-ignoriert, server-only)
+- `mitglieder/imap-config-seed.json` – Standardwerte (git-getrackt): `imap.strato.de:993`, Login `info@mobout.de`, Passwort leer (muss Admin eintragen)
+- `admin/imap-config.php` – Bearbeitungs-Formular (nur Admin-sichtbar)
+- `admin/imap-config-save.php` – Speichern mit Validierung (CSRF + Verbindungsprüfung)
+- `admin/index.php` – Widget + Quick-Links
+- `admin/data-transfer-lib.php` – Modul `imap-config` für Export/Import
+
+**Setup für Admins:**
+1. Haupt-Admin trägt IMAP-Daten ein: `imap.strato.de:993`, `info@mobout.de`, Passwort
+2. Test-Button → "Verbindung erfolgreich"
+3. Speichern → Daten in `imap-config.json`
+4. Admin teilt IMAP-Daten mit anderen Admins (z.B. per Slack): "Server: imap.strato.de, Port: 993, Login: info@mobout.de, Passwort: ..."
+5. Andere Admins tragen Daten in ihre Mail-Clients ein (Outlook, Apple Mail, Thunderbird, Gmail-App, etc.)
+
+**Gmail-Spezialfall:**
+- Gmail blockiert von Hause aus den Direct-Login via IMAP
+- Admin mit Gmail braucht **2FA** + **App-Passwort** (nicht sein normales Gmail-Passwort!)
+- Schritte:
+  1. Gmail-Konto: Zwei-Faktor-Authentifizierung aktivieren (falls noch nicht)
+  2. https://myaccount.google.com/apppasswords → App "Mail" + Gerät wählen → **App-Passwort kopieren**
+  3. Im Mail-Client: IMAP-Server + Login `info@mobout.de` + **das App-Passwort** (nicht Gmail-Passwort!)
+
+**Fallback: Strato-Webmail (ohne Setup):**
+- Direkter Link im Admin-Panel: https://webmail.strato.de
+- Nur für schnellen Zugriff, wenn Client-Setup kompliziert ist
+
+**Sicherheit:**
+- IMAP-Credentials nur in git-ignoriertem `/data/`-Verzeichnis (server-only)
+- Credentials nur im Admin-Panel sichtbar (nicht öffentlich)
+- CSRF-Token auf Speichern-Formular
+- Verbindungsprüfung beim Test + beim Speichern (speichert nur wenn ok)
+
+**Alte Weiterleitungen abschalten:**
+- Vorher: `info@mobout.de` → `andre.schlieper@googlemail.com` (einzeln weitergeleitet)
+- Nachher: IMAP + Webmail, keine Weiterleitung mehr
+- Migration: 2–3 Tage parallel, dann Weiterleitung in Strato löschen
+
+**Export/Import:**
+- Modul `imap-config` in `admin/data-transfer-lib.php`'s Registry
+- IMAP-Konfiguration wird mit ins ZIP-Bundle aufgenommen
+- Nützlich: Staging → Production, oder lokales Backup
+
+---
+
 ## Datenübertragung (Admin)
 
 Alle dynamischen, git-ignorierten Datenbestände (MOTD, Mitglieder, Expeditionen, Accounts,
