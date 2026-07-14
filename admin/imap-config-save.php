@@ -11,17 +11,13 @@ $user = trim($_POST['user'] ?? '');
 $pass = trim($_POST['pass'] ?? '');
 
 if (empty($host) || empty($port) || empty($user) || empty($pass)) {
-  http_response_code(400);
-  header('Content-Type: application/json');
-  echo json_encode(['ok' => false, 'error' => 'Alle Felder erforderlich']);
+  header('Location: index.php?msg=imap-config-error&info=' . rawurlencode('Alle Felder erforderlich') . '#email-config-bereich');
   exit;
 }
 
 $test = test_imap_connection($host, $port, $user, $pass);
 if (!$test['ok']) {
-  http_response_code(400);
-  header('Content-Type: application/json');
-  echo json_encode(['ok' => false, 'error' => $test['error']]);
+  header('Location: index.php?msg=imap-config-error&info=' . rawurlencode($test['error']) . '#email-config-bereich');
   exit;
 }
 
@@ -32,7 +28,5 @@ save_imap_config([
   'pass' => $pass,
 ]);
 
-http_response_code(200);
-header('Content-Type: application/json');
-echo json_encode(['ok' => true, 'message' => 'Konfiguration gespeichert ✓']);
+header('Location: index.php?msg=imap-config-saved#email-config-bereich');
 exit;

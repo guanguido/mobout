@@ -56,11 +56,13 @@ $msgMap = [
     'import-error' => 'Import fehlgeschlagen.',
     'backup-deleted' => 'Sicherung gelöscht.',
     'backup-delete-error' => 'Sicherung konnte nicht gelöscht werden.',
+    'imap-config-saved' => 'E-Mail-Konfiguration gespeichert.',
+    'imap-config-error' => 'E-Mail-Konfiguration konnte nicht gespeichert werden.',
 ];
 if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
     $flash = $msgMap[$_GET['msg']];
-    $flashType = in_array($_GET['msg'], ['error', 'export-error', 'import-error', 'backup-delete-error'], true) ? 'err' : 'ok';
-    if (in_array($_GET['msg'], ['import-ok', 'import-error'], true) && isset($_GET['info'])) {
+    $flashType = in_array($_GET['msg'], ['error', 'export-error', 'import-error', 'backup-delete-error', 'imap-config-error'], true) ? 'err' : 'ok';
+    if (in_array($_GET['msg'], ['import-ok', 'import-error', 'imap-config-error'], true) && isset($_GET['info'])) {
         $flash .= ' ' . (string) $_GET['info'];
     }
 }
