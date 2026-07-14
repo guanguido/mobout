@@ -114,7 +114,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
         main { max-width: 1000px; margin: 0 auto; padding: 3rem 2rem; }
         h1.page-title { color: var(--primary-color); font-size: 1.8rem; margin-bottom: 0.5rem; }
         .intro { color: #666; margin-bottom: 2rem; }
-        .flash { padding: 0.85rem 1.1rem; border-radius: 8px; margin-bottom: 1.5rem; font-weight: 500; }
+        .flash { padding: 0.85rem 1.1rem; border-radius: 8px; margin-bottom: 1.5rem; font-weight: 500; position: sticky; top: 0.5rem; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
         .flash.ok { background: #e6f4ea; color: #1e7a3d; border: 1px solid #b6e0c4; }
         .flash.err { background: #fdecea; color: #b3261e; border: 1px solid #f5c6c2; }
         .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
