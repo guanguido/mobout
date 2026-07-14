@@ -548,7 +548,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                 <strong>Passwort:</strong> (siehe oben)
             </blockquote>
 
-            <p><strong>⚠️ Gmail-Nutzer:</strong> Statt normales Gmail-Passwort ein App-Passwort verwenden (siehe Gmail-Einstellungen).</p>
+            <p><strong>Fallback:</strong> <a href="https://webmail.strato.de" target="_blank">Strato-Webmail öffnen</a> (im Browser, ohne Mail-Client-Setup).</p>
         </section>
 
         <!-- E-Mail-Templates: Betreff + Text der automatisch versendeten Mails -->
