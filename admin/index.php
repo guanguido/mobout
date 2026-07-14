@@ -522,7 +522,10 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
 
                 <div class="form-group">
                     <label for="pass">Passwort:</label>
-                    <input type="password" id="pass" name="pass" value="<?= h($imap_config['pass'] ?? '') ?>" placeholder="••••••••" required>
+                    <div style="display: flex; gap: 0.5rem; align-items: flex-end;">
+                        <input type="password" id="pass" name="pass" value="<?= h($imap_config['pass'] ?? '') ?>" placeholder="••••••••" required style="flex: 1;">
+                        <button type="button" id="toggle-pass" onclick="document.getElementById('pass').type = document.getElementById('pass').type === 'password' ? 'text' : 'password'; this.textContent = document.getElementById('pass').type === 'password' ? '👁️ Zeigen' : '👁️‍🗨️ Verbergen';" style="padding: 0.5rem 1rem; background: var(--secondary-color); color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">👁️ Zeigen</button>
+                    </div>
                 </div>
 
                 <div class="form-actions">
