@@ -479,8 +479,7 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                             <?php foreach ($mail_preview as $mail): ?>
                                 <tr>
                                     <td>
-                                        <strong><?= h($mail['subject']) ?></strong><br>
-                                        <small><?= h($mail['date']) ?></small>
+                                        <small><?= h($mail['date']) ?></small> · <?= h($mail['subject']) ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
