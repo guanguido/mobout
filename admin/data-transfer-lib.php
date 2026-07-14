@@ -685,7 +685,7 @@ function data_transfer_import_consent_log(ZipArchive $zip): array
         if (!is_dir(CONSENT_LOG_DIR)) {
             mkdir(CONSENT_LOG_DIR, 0755, true);
         }
-        file_put_contents($target, $contents);
+        file_put_contents($target, $contents, LOCK_EX);
         $imported++;
     }
     return ['ok' => true, 'summary' => sprintf('Zustimmungs-Audit-Log: %d neue Einträge übernommen.', $imported)];

@@ -83,7 +83,8 @@ function reset_email_template(string $key): void
     }
     file_put_contents(
         EMAIL_TEMPLATES_DATA_FILE,
-        json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        LOCK_EX
     );
 }
 
@@ -103,7 +104,8 @@ function save_email_templates(array $templates): void
     }
     file_put_contents(
         EMAIL_TEMPLATES_DATA_FILE,
-        json_encode($clean, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        json_encode($clean, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        LOCK_EX
     );
 }
 

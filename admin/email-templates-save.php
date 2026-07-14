@@ -3,7 +3,7 @@
 // eingeloggte Admins. Iteriert generisch über email_template_defs(), damit neue
 // Templates künftig ohne Änderung an diesem Endpunkt funktionieren.
 require __DIR__ . '/auth.php';
-require __DIR__ . '/../mitglieder/email-templates-lib.php';
+require_once __DIR__ . '/../mitglieder/email-templates-lib.php';
 
 require_admin();
 

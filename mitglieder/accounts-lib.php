@@ -54,7 +54,8 @@ function save_accounts(array $list): void
     }
     file_put_contents(
         ACCOUNTS_DATA_FILE,
-        json_encode($list, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        json_encode($list, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        LOCK_EX
     );
 }
 
@@ -295,6 +296,7 @@ function write_consent_log(string $memberId, string $name, string $email, string
     $filename = $safeStamp . '-' . preg_replace('/[^a-z0-9\-]/', '', $memberId) . '.json';
     file_put_contents(
         CONSENT_LOG_DIR . '/' . $filename,
-        json_encode($entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        json_encode($entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        LOCK_EX
     );
 }
