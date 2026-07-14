@@ -1,8 +1,9 @@
 <?php
+require __DIR__ . '/auth.php';
 require_admin();
 require_once __DIR__ . '/../mitglieder/imap-lib.php';
 
-member_check_csrf($_POST['csrf'] ?? '');
+admin_check_csrf();
 
 $host = trim($_POST['host'] ?? '');
 $port = (int)($_POST['port'] ?? 0);

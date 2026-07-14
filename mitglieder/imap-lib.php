@@ -39,22 +39,25 @@ function test_imap_connection($host, $port, $user, $pass) {
   }
 
   if (!function_exists('imap_open')) {
-    return ['ok' => false, 'error' => 'IMAP-Funktion nicht verfügbar (PHP-Extension fehlt)'];
+    return ['ok' => false, 'error' => 'IMAP-Extension nicht aktiviert. Kontaktiere deinen Hosting-Provider (Strato).'];
   }
 
   $mailbox = "{" . $host . ":" . $port . "/imap/ssl}INBOX";
 
-  set_error_handler(function() {});
+  $errors = [];
+  set_error_handler(function($errno, $errstr) use (&$errors) {
+    $errors[] = $errstr;
+  });
+
   $stream = @imap_open($mailbox, $user, $pass);
   restore_error_handler();
 
   if ($stream === false) {
-    return ['ok' => false, 'error' => 'Verbindung fehlgeschlagen: Benutzername/Passwort falsch oder Server nicht erreichbar'];
+    $errorMsg = !empty($errors) ? implode(' | ', $errors) : 'Verbindung fehlgeschlagen';
+    return ['ok' => false, 'error' => $errorMsg . ' (Prüfe: Server-Adresse, Port, Login, Passwort)'];
   }
 
-  $unread = @imap_num_msg($stream);
   @imap_close($stream);
-
   return ['ok' => true, 'message' => 'Verbindung erfolgreich! ✓'];
 }
 
