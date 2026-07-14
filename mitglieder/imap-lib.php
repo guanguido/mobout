@@ -76,10 +76,10 @@ function get_unread_count($host, $port, $user, $pass) {
     return -1;
   }
 
-  $count = @imap_num_msg($stream);
+  $unseen = @imap_search($stream, 'UNSEEN', SE_UID);
   @imap_close($stream);
 
-  return (int)$count;
+  return $unseen === false ? 0 : count($unseen);
 }
 
 function get_mail_preview($host, $port, $user, $pass, $limit = 5) {
