@@ -279,8 +279,13 @@ $aiActive = ai_is_active();
                 <p><a href="#email-status-bereich">E-Mail-Status ansehen &rarr;</a> | <a href="#email-config-bereich">Konfiguration &rarr;</a></p>
             </div>
             <div class="card">
+                <h2>KI-Textgenerierung</h2>
+                <p>Kurztext-Vorschläge für Mitglieder aus Schlagworten per KI erzeugen (Anthropic Claude). Aktiv/Inaktiv-Schalter, API-Key hinterlegen &ndash; nur bei aktiver Funktion entstehen Kosten.</p>
+                <p><a href="#ai-config-bereich">KI konfigurieren &rarr;</a></p>
+            </div>
+            <div class="card">
                 <h2>Datenübertragung</h2>
-                <p>Alle dynamischen Daten (MOTD, Mitglieder, Expeditionen, Accounts, Templates, Berechtigungen, Zustimmungs-Audit, Besucherzähler, IMAP-Config) als ZIP-Bundle exportieren oder importieren &ndash; für Backup, Staging-Production-Übertragung und Migrationen.</p>
+                <p>Alle dynamischen Daten (MOTD, Mitglieder, Expeditionen, Accounts, Templates, Berechtigungen, Zustimmungs-Audit, Besucherzähler, IMAP-Config, KI-Config) als ZIP-Bundle exportieren oder importieren &ndash; für Backup, Staging-Production-Übertragung und Migrationen.</p>
                 <p><a href="#data-bereich">Daten übertragen &rarr;</a></p>
             </div>
         </div>
