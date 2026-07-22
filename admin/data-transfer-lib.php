@@ -746,6 +746,11 @@ function data_transfer_modules(): array
             'export' => 'data_transfer_export_imap_config',
             'import' => 'data_transfer_import_imap_config',
         ],
+        'ai-config' => [
+            'label' => 'KI-Konfiguration (API-Key, sensibel)',
+            'export' => 'data_transfer_export_ai_config',
+            'import' => 'data_transfer_import_ai_config',
+        ],
     ];
 }
 
@@ -778,6 +783,29 @@ function data_transfer_import_imap_config(array $data): void
         $config = json_decode($data['files']['imap-config/imap-config.json'], true);
         if (is_array($config)) {
             save_imap_config($config);
+        }
+    }
+}
+
+// KI-Konfiguration Export/Import (enthaelt den API-Key - sensibel behandeln)
+function data_transfer_export_ai_config(): array
+{
+    require_once __DIR__ . '/../mitglieder/ai-lib.php';
+    $config = load_ai_config();
+    return [
+        'files' => [
+            'ai-config/ai-config.json' => json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n",
+        ],
+    ];
+}
+
+function data_transfer_import_ai_config(array $data): void
+{
+    require_once __DIR__ . '/../mitglieder/ai-lib.php';
+    if (isset($data['files']['ai-config/ai-config.json'])) {
+        $config = json_decode($data['files']['ai-config/ai-config.json'], true);
+        if (is_array($config)) {
+            save_ai_config($config);
         }
     }
 }

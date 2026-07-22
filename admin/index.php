@@ -7,6 +7,7 @@ require_once __DIR__ . '/../mitglieder/navionics-lib.php';
 require_once __DIR__ . '/../mitglieder/role-permissions-lib.php';
 require_once __DIR__ . '/../mitglieder/visitor-counter-lib.php';
 require_once __DIR__ . '/../mitglieder/imap-lib.php';
+require_once __DIR__ . '/../mitglieder/ai-lib.php';
 require_once __DIR__ . '/data-transfer-lib.php';
 
 // Logout
@@ -58,14 +59,17 @@ $msgMap = [
     'backup-delete-error' => 'Sicherung konnte nicht gelöscht werden.',
     'imap-config-saved' => 'E-Mail-Konfiguration gespeichert.',
     'imap-config-error' => 'E-Mail-Konfiguration konnte nicht gespeichert werden.',
+    'ai-config-saved' => 'KI-Konfiguration gespeichert.',
+    'ai-config-testfail' => 'Verbindung zur KI fehlgeschlagen – Konfiguration gespeichert, aber deaktiviert. Bitte API-Key prüfen.',
 ];
 if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
     $flash = $msgMap[$_GET['msg']];
-    $flashType = in_array($_GET['msg'], ['error', 'export-error', 'import-error', 'backup-delete-error', 'imap-config-error'], true) ? 'err' : 'ok';
+    $flashType = in_array($_GET['msg'], ['error', 'export-error', 'import-error', 'backup-delete-error', 'imap-config-error', 'ai-config-testfail'], true) ? 'err' : 'ok';
     if (in_array($_GET['msg'], ['import-ok', 'import-error', 'imap-config-error'], true) && isset($_GET['info'])) {
         $flash .= ' ' . (string) $_GET['info'];
     }
 }
+$aiActive = ai_is_active();
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -307,7 +311,16 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                         Admin-Berechtigung (Zugang zum Admin-Bereich)
                     </label>
                     <p class="field-hint">Zusätzlich zur Rolle. Erlaubt die Anmeldung im Admin-Bereich mit E-Mail + Mitglieder-Passwort und volle Admin-Rechte. Setzt einen eingerichteten Login voraus (E-Mail + selbst gesetztes Passwort).</p>
-                    <label>Kurztext<textarea name="text" rows="3"></textarea></label>
+                    <label>Kurztext<textarea name="text" rows="3" id="text-new"></textarea></label>
+                    <?php if ($aiActive): ?>
+                    <div class="ai-slogan">
+                        <div class="ai-slogan-row">
+                            <input type="text" class="ai-keywords" placeholder="Schlagworte für KI-Vorschlag, z. B. Hecht, Schweden, Kapitän">
+                            <button type="button" class="ai-generate-btn" data-target="text-new">✨ Mit KI generieren</button>
+                        </div>
+                        <span class="ai-hint"></span>
+                    </div>
+                    <?php endif; ?>
                     <label>Ersatz-Icon (Kürzel/Emoji – nur sichtbar, wenn kein Foto vorhanden ist)<input type="text" name="icon" maxlength="4" placeholder="z. B. A oder 🎣"></label>
                     <label>Kleines Icon nach dem Text (Emoji, optional)<input type="text" name="emoji" maxlength="20" placeholder="z. B. 🎣"></label>
                     <label>Foto (optional, jpg/png/webp, max. 5 MB)<input type="file" name="image" accept="image/jpeg,image/png,image/webp"></label>
@@ -377,7 +390,16 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
                                     Admin-Berechtigung (Zugang zum Admin-Bereich)
                                 </label>
                                 <p class="field-hint">Zusätzlich zur Rolle. Anmeldung im Admin-Bereich mit E-Mail + Mitglieder-Passwort; setzt einen eingerichteten Login voraus. Abwählen entzieht die Berechtigung.</p>
-                                <label>Kurztext<textarea name="text" rows="3"><?= h($m['text'] ?? '') ?></textarea></label>
+                                <label>Kurztext<textarea name="text" rows="3" id="text-<?= h($m['id']) ?>"><?= h($m['text'] ?? '') ?></textarea></label>
+                                <?php if ($aiActive): ?>
+                                <div class="ai-slogan">
+                                    <div class="ai-slogan-row">
+                                        <input type="text" class="ai-keywords" placeholder="Schlagworte für KI-Vorschlag, z. B. Hecht, Schweden, Kapitän">
+                                        <button type="button" class="ai-generate-btn" data-target="text-<?= h($m['id']) ?>">✨ Mit KI generieren</button>
+                                    </div>
+                                    <span class="ai-hint"></span>
+                                </div>
+                                <?php endif; ?>
                                 <label>Ersatz-Icon (Kürzel/Emoji – Fallback ohne Foto)<input type="text" name="icon" maxlength="4" value="<?= h($m['icon'] ?? '') ?>"></label>
                                 <label>Kleines Icon nach dem Text (Emoji, optional)<input type="text" name="emoji" maxlength="20" value="<?= h($m['emoji'] ?? '') ?>"></label>
                                 <label><?= !empty($m['image']) ? 'Foto ersetzen' : 'Foto hinzufügen' ?> (optional, jpg/png/webp, max. 5 MB)<input type="file" name="image" accept="image/jpeg,image/png,image/webp"></label>
@@ -565,6 +587,51 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
             <p><strong>Fallback:</strong> <a href="https://webmail.strato.de" target="_blank">Strato-Webmail öffnen</a> (im Browser, ohne Mail-Client-Setup).</p>
         </section>
 
+        <!-- KI-Textgenerierung: API-Key + Aktiv-Schalter fuer die Slogan-Generierung -->
+        <section class="panel" id="ai-config-bereich">
+            <h2>🤖 KI-Textgenerierung</h2>
+            <p class="hint">Erzeugt auf Wunsch Kurztext-Vorschläge für Mitglieder aus ein paar Schlagworten (Anthropic Claude). Rein optionale Hilfe – der Kurztext bleibt immer manuell editierbar.</p>
+
+            <?php $ai_config = load_ai_config(); ?>
+
+            <div style="background:#fff3cd; border:1px solid #ffe69c; border-radius:8px; padding:0.85rem 1.1rem; color:#6a4b00; font-size:0.9rem;">
+                <strong>Kosten &amp; Konto:</strong> Es entstehen <strong>nur</strong> Kosten, wenn die Funktion <strong>aktiv</strong> ist und der Button tatsächlich benutzt wird (Bruchteil eines Cents pro Vorschlag). Voraussetzung ist ein separates API-Konto auf <em>console.anthropic.com</em> mit hinterlegtem Zahlungsmittel – das normale Claude-/ChatGPT-Abo genügt <strong>nicht</strong>. Der API-Key ist nur hier sichtbar und wird nie öffentlich ausgeliefert. Deaktivieren stoppt jede Nutzung/Kosten, der Key bleibt dabei erhalten.
+            </div>
+
+            <form method="POST" action="ai-config-save.php" class="admin-form" style="margin-top:1rem;">
+                <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
+
+                <label style="display:flex; align-items:center; gap:0.5rem; flex-direction:row; font-weight:600;">
+                    <input type="checkbox" name="enabled" value="1" style="width:auto; margin:0;" <?= !empty($ai_config['enabled']) ? 'checked' : '' ?>>
+                    KI-Textgenerierung aktivieren
+                </label>
+                <p class="admin-info" style="margin-top:0.25rem;">Aktueller Status:
+                    <strong><?= $aiActive ? 'aktiv' : 'inaktiv' ?></strong>
+                    (<?= $ai_config['api_key'] !== '' ? 'API-Key hinterlegt' : 'kein API-Key' ?>).
+                    Der „Mit KI generieren"-Button erscheint in den Mitglieder-Formularen nur, wenn aktiv <strong>und</strong> ein Key hinterlegt ist.
+                </p>
+
+                <div class="form-group">
+                    <label for="ai_api_key">API-Key:</label>
+                    <div style="display:flex; gap:0.5rem; align-items:flex-end;">
+                        <input type="password" id="ai_api_key" name="api_key" value="<?= h($ai_config['api_key'] ?? '') ?>" placeholder="sk-ant-..." autocomplete="off" style="flex:1;">
+                        <button type="button" onclick="var f=document.getElementById('ai_api_key'); f.type=f.type==='password'?'text':'password'; this.textContent=f.type==='password'?'👁️ Zeigen':'👁️‍🗨️ Verbergen';" style="padding:0.5rem 1rem; background:var(--secondary-color); color:white; border:none; border-radius:4px; cursor:pointer; white-space:nowrap;">👁️ Zeigen</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="ai_model">Modell:</label>
+                    <input type="text" id="ai_model" name="model" value="<?= h($ai_config['model'] ?? 'claude-haiku-4-5') ?>" placeholder="claude-haiku-4-5">
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">💾 Speichern</button>
+                </div>
+
+                <p class="admin-info" style="margin-top:1rem;">Beim Aktivieren wird die Verbindung automatisch geprüft. Schlägt sie fehl, wird die Konfiguration gespeichert, aber deaktiviert (der Key bleibt erhalten).</p>
+            </form>
+        </section>
+
         <!-- E-Mail-Templates: Betreff + Text der automatisch versendeten Mails -->
         <section class="panel" id="email-templates-bereich">
             <h2>E-Mail-Templates</h2>
@@ -683,6 +750,61 @@ if (isset($_GET['msg']) && isset($msgMap[$_GET['msg']])) {
             <?php endif; ?>
         </section>
 
+<?php if ($aiActive): ?>
+        <style>
+            .ai-slogan { margin: -0.35rem 0 0.85rem; }
+            .ai-slogan-row { display: flex; gap: 0.5rem; align-items: stretch; flex-wrap: wrap; }
+            .ai-slogan-row .ai-keywords { flex: 1; min-width: 200px; padding: 0.5rem 0.65rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.95rem; }
+            .ai-generate-btn { padding: 0.5rem 0.9rem; background: var(--accent-color); color: #fff; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 0.9rem; }
+            .ai-generate-btn:disabled { opacity: 0.55; cursor: default; }
+            .ai-hint { display: block; font-size: 0.85rem; margin-top: 0.35rem; min-height: 1em; }
+            .ai-hint.err { color: #b3261e; }
+            .ai-hint.ok { color: #1e7a3d; }
+            .ai-hint.busy { color: #666; }
+        </style>
+        <script>
+            (function () {
+                var CSRF = <?= json_encode($csrf) ?>;
+                document.querySelectorAll('.ai-generate-btn').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        var container = btn.closest('.ai-slogan');
+                        var kwInput = container.querySelector('.ai-keywords');
+                        var hint = container.querySelector('.ai-hint');
+                        var target = document.getElementById(btn.getAttribute('data-target'));
+                        var keywords = (kwInput.value || '').trim();
+                        if (!keywords) {
+                            hint.className = 'ai-hint err';
+                            hint.textContent = 'Bitte zuerst ein paar Schlagworte eingeben.';
+                            return;
+                        }
+                        btn.disabled = true;
+                        hint.className = 'ai-hint busy';
+                        hint.textContent = 'KI erzeugt einen Vorschlag …';
+                        var data = new FormData();
+                        data.append('keywords', keywords);
+                        data.append('csrf', CSRF);
+                        fetch('ai-generate.php', { method: 'POST', body: data })
+                            .then(function (r) { return r.json(); })
+                            .then(function (res) {
+                                if (res && res.ok && res.text) {
+                                    target.value = res.text;
+                                    hint.className = 'ai-hint ok';
+                                    hint.textContent = 'Vorschlag eingefügt – du kannst ihn frei anpassen.';
+                                } else {
+                                    hint.className = 'ai-hint err';
+                                    hint.textContent = (res && res.message) ? res.message : 'KI derzeit nicht verfügbar – bitte Text manuell eingeben.';
+                                }
+                            })
+                            .catch(function () {
+                                hint.className = 'ai-hint err';
+                                hint.textContent = 'KI derzeit nicht verfügbar – bitte Text manuell eingeben.';
+                            })
+                            .then(function () { btn.disabled = false; });
+                    });
+                });
+            })();
+        </script>
+<?php endif; ?>
         <a class="back-link" href="/">&larr; Zur öffentlichen Website</a>
     </main>
 <?php endif; ?>
