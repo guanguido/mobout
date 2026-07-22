@@ -24,6 +24,8 @@ mobout/
 │   ├── members-save.php # CRUD-Schreib-Endpunkt für Mitglieder (action=create/update/delete/delete-image/grant-consent), legt bei E-Mail einen Account an
 │   ├── email-templates-save.php # Speichert Betreff/Text der editierbaren E-Mail-Templates
 │   ├── role-permissions-save.php # Speichert/setzt zurück die Berechtigungs-Matrix (Rolle x Recht)
+│   ├── ai-config-save.php # Speichert die KI-Konfiguration (Aktiv-Schalter, API-Key, Modell); testet die Verbindung beim Aktivieren
+│   ├── ai-generate.php # AJAX-Endpunkt: erzeugt aus Schlagworten einen Kurztext-Vorschlag (immer HTTP 200 JSON, stille Fehlertoleranz)
 │   ├── data-transfer-lib.php    # Modul-Registry für Export/Import der dynamischen data/-Inhalte (MOTD, Mitglieder, Expeditionen, Accounts, E-Mail-Templates, Rollen-Berechtigungen, Zustimmungs-Audit-Log, Besucherzähler), Backup-Rotation
 │   ├── data-transfer-export.php # Baut ein ZIP-Bundle aller Module und liefert es als Download
 │   ├── data-transfer-import.php # Nimmt ein ZIP-Bundle entgegen, ersetzt ausgewählte Module vollständig (mit Backup)
@@ -51,7 +53,9 @@ mobout/
 │   ├── members-seed.json     # Git-getrackter Ausgangsbestand der 17 migrierten Mitglieder
 │   ├── members-seed-images/  # Git-getrackte Startfotos der Mitglieder (Fallback von member-image.php)
 │   ├── visitor-counter-lib.php # Lese-/Schreibfunktionen für den Besucherzähler (Seitenaufrufe, eindeutige Besucher), von counter.php und admin/index.php genutzt
-│   ├── data/           # Nur serverseitig, git-ignoriert (motd.txt, expeditions.json, expeditions-images/, members.json, members-images/, accounts.json, email-templates.json, role-permissions.json, consent-log/, visitor-counter.json, visitor-counter-today.json, backups/) – überlebt Deploys; per .htaccess ("Require all denied") gegen Direktzugriff gesperrt
+│   ├── ai-lib.php      # KI-Textgenerierung: Config-Load/Save, ai_is_active() (Kostenkontrolle), ai_generate_slogan() via cURL (stille Fehlertoleranz), test_ai_connection()
+│   ├── ai-config-seed.json # Git-getrackter Default der KI-Konfiguration (deaktiviert, ohne Key)
+│   ├── data/           # Nur serverseitig, git-ignoriert (motd.txt, expeditions.json, expeditions-images/, members.json, members-images/, accounts.json, email-templates.json, role-permissions.json, consent-log/, visitor-counter.json, visitor-counter-today.json, ai-config.json, backups/) – überlebt Deploys; per .htaccess ("Require all denied") gegen Direktzugriff gesperrt
 │   └── .htaccess       # Sperrt Direktzugriff auf data/ (RedirectMatch 403); KEIN Basic Auth mehr
 ├── assets/
 │   ├── images/         # Originalfotos (Personenbilder, Logos)
@@ -73,8 +77,8 @@ mobout/
   `motd.php`, `contact.php`, `expeditions.php`, `expedition-image.php`,
   `mitglieder/expeditions-save.php`, `mitglieder/expeditions-lib.php`, `members.php`,
   `member-image.php`, `mitglieder/members-lib.php`, `mitglieder/role-permissions-lib.php`,
-  `counter.php`, `mitglieder/visitor-counter-lib.php` und `admin/*.php`, siehe eigene Abschnitte
-  unten
+  `counter.php`, `mitglieder/visitor-counter-lib.php`, `mitglieder/ai-lib.php` und `admin/*.php`,
+  siehe eigene Abschnitte unten
 
 ## Sprache
 
@@ -671,6 +675,53 @@ Zentrale IMAP-Inbox für alle Admins statt einzelner Weiterleitungen. Alle Admin
 
 ---
 
+## KI-Textgenerierung (Admin)
+
+Optionale KI-Unterstützung: Der Admin kann aus ein paar Schlagworten per **Anthropic Claude
+API** einen Kurztext-/Slogan-Vorschlag für das `text`-Feld eines Mitglieds erzeugen lassen,
+statt ihn selbst zu formulieren. Folgt dem gleichen `data/`-Seed-Muster wie die IMAP-/Navionics-
+Konfiguration (git-ignoriertes JSON + git-getrackter Seed + Export/Import-Modul). **Erster
+ausgehender HTTPS-Aufruf im Projekt** (per cURL) – vor der Umsetzung über eine Phase-0-Diagnose
+abgesichert (Strato erlaubt Outbound, cURL 8.19 + OpenSSL 3.0 vorhanden, Konto/Key ok).
+
+- **Speicher:** `mitglieder/data/ai-config.json` (git-ignoriert, server-only), Seed-Fallback
+  `mitglieder/ai-config-seed.json` (git-getrackt, **Standard: deaktiviert, ohne Key**). Felder:
+  `enabled` (bool), `api_key` (string), `model` (string, Default `claude-haiku-4-5`).
+- **Lib:** `mitglieder/ai-lib.php` – `load_ai_config()`/`save_ai_config()` (whitelistet Felder;
+  ohne Key wird `enabled` beim Speichern hart auf `false` gesetzt), `ai_is_active()`,
+  `ai_generate_slogan()`, `test_ai_connection()` und der gemeinsame cURL-Helfer `ai_api_call()`
+  (POST an `https://api.anthropic.com/v1/messages`, Header `x-api-key` + `anthropic-version:
+  2023-06-01`, TLS-Verifikation an, Timeout 20 s).
+- **Kostenkontrolle (bewusst):** `ai_is_active()` ist nur `true`, wenn die Funktion **aktiv** ist
+  **und** ein Key hinterlegt ist. Sonst erscheint der Button nicht und es wird **nie** ein
+  (kostenpflichtiger) API-Aufruf gemacht. Der Aktiv-Schalter ist bewusst **vom Key entkoppelt** –
+  man kann den Key hinterlegen und die Funktion trotzdem ausgeschaltet lassen.
+- **Stille Fehlertoleranz (bewusst):** `ai_generate_slogan()` wirft **nie** eine Exception und
+  liefert bei jedem Fehler (kein cURL, Netzwerk, HTTP ≠ 200, ungültiger Key, Rate-Limit)
+  `ok=false`. Der Endpunkt `admin/ai-generate.php` antwortet **immer HTTP 200 JSON**; die UI fällt
+  still auf den getippten Text zurück (dezenter Hinweis „KI derzeit nicht verfügbar"), der
+  Speichervorgang wird nie blockiert.
+- **Admin-UI:** Panel „🤖 KI-Textgenerierung" in `admin/index.php` (`#ai-config-bereich`):
+  Aktiv-Checkbox, API-Key (Passwort-Feld + Zeigen-Toggle), Modell, Speichern über
+  `admin/ai-config-save.php`. Beim **Aktivieren** wird die Verbindung getestet – schlägt sie fehl,
+  wird die Konfiguration gespeichert, aber deaktiviert (Key bleibt erhalten), statt ganz
+  abzulehnen. In **beiden** Mitglieder-Formularen (Anlegen + Bearbeiten) erscheint direkt beim
+  Kurztext-Feld ein Schlagwort-Feld + Button „✨ Mit KI generieren" (nur wenn `ai_is_active()`);
+  ein kleiner Fetch-JS-Block ruft `admin/ai-generate.php` und füllt das Textarea per `.value`
+  (kein `innerHTML`).
+- **Nur Admin, nur Kurztext:** bewusst kleiner erster Schritt – kein Mitglieder-Self-Service, nur
+  das Mitglieder-`text`-Feld. `ai-lib.php` ist aber wiederverwendbar gebaut (Expeditions-
+  beschreibung/MOTD ließen sich später mit wenig Aufwand ergänzen).
+- **Voraussetzung:** separates Anthropic-API-Konto (console.anthropic.com) mit Zahlungsmittel – das
+  Claude-/ChatGPT-Abo deckt API-Nutzung **nicht** ab. Kosten pro Slogan = Bruchteil eines Cents.
+- **Export/Import:** Modul `ai-config` in `admin/data-transfer-lib.php`s Registry – **enthält den
+  API-Key, sensibel** (wie das `accounts`-Modul beim ZIP-Umgang behandeln).
+- **Umgebungstrennung:** Production (HTTPS) und Staging (HTTP) haben getrennte `ai-config.json`. Der
+  API-Key sollte je Umgebung getrennt sein (Staging-Key ≠ Production-Key), da der Key auf Staging
+  beim Eintragen über HTTP übertragen wird.
+
+---
+
 ## Datenübertragung (Admin)
 
 Alle dynamischen, git-ignorierten Datenbestände (MOTD, Mitglieder, Expeditionen, Accounts,
@@ -693,7 +744,8 @@ abweichender Stände.
 
 - **Architektur:** `admin/data-transfer-lib.php` definiert eine zentrale Modul-Registry
   (`data_transfer_modules()`) mit den Modulen `motd`, `members`, `expeditions`, `accounts`,
-  `email-templates`, `navionics`, `role-permissions`, `consent-log`, `visitor-counter`. Jedes Modul hat eine `export`- und eine `import`-Funktion;
+  `email-templates`, `navionics`, `role-permissions`, `consent-log`, `visitor-counter`, `imap-config`,
+  `ai-config`. Jedes Modul hat eine `export`- und eine `import`-Funktion;
   Export-/Import-Endpunkt sowie die Admin-UI iterieren generisch über die Registry (jedes Modul im
   UI einzeln per Checkbox wähl-/abwählbar). **Erweiterbar:** ein künftiger weiterer dynamischer
   Datentyp nach demselben `data/`-Prinzip wird durch zwei neue Funktionen plus einen weiteren
@@ -704,14 +756,16 @@ abweichender Stände.
   **`consent-log` ist additiv statt vollständig ersetzend:** ein Import ergänzt nur fehlende
   Audit-Dateien, überschreibt/löscht nie vorhandene – ein Audit-Log darf durch einen Import keine
   Nachweise verlieren.
-- **Sensibel:** das Modul `accounts` enthält Passwort-Hashes und E-Mail-Adressen – wie alle Module nur
-  per Admin-Login herunterladbar, aber beim Umgang mit der ZIP-Datei besonders vorsichtig behandeln.
+- **Sensibel:** die Module `accounts` (Passwort-Hashes, E-Mail-Adressen), `ai-config` (KI-API-Key)
+  und `imap-config` (E-Mail-Passwort) enthalten Geheimnisse – wie alle Module nur per Admin-Login
+  herunterladbar, aber beim Umgang mit der ZIP-Datei besonders vorsichtig behandeln.
 - **Bundle-Format:** ein ZIP-Archiv (`ZipArchive`) mit `manifest.json` (Version, Zeitstempel, Host,
   enthaltene Module) sowie je Modul der JSON-Datei und den referenzierten Bildern/Dateien
   (`members/members.json` + `members/images/...`, `expeditions/expeditions.json` +
   `expeditions/images/...`, `motd/motd.txt`, `accounts/accounts.json`,
   `email-templates/email-templates.json`, `navionics/navionics.json`, `role-permissions/role-permissions.json`,
-  `consent-log/<datei>.json` je Zustimmung, `visitor-counter/visitor-counter.json`).
+  `consent-log/<datei>.json` je Zustimmung, `visitor-counter/visitor-counter.json`,
+  `imap-config/imap-config.json`, `ai-config/ai-config.json`).
 - **Export:** `admin/data-transfer-export.php` (Session- + CSRF-geschützt) baut das ZIP aus allen
   Modulen und liefert es als Download (`mobout-data-<host>-<Zeitstempel>.zip`).
 - **Import:** `admin/data-transfer-import.php` (Session- + CSRF-geschützt) validiert das hochgeladene
