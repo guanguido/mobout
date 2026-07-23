@@ -193,6 +193,7 @@ $aiActive = ai_is_active();
             </div>
             <nav>
                 <?php if (admin_is_logged_in()): ?>
+                    <a href="changelog.php">Änderungshistorie</a>
                     <a href="help.php">Hilfe</a>
                     <a href="index.php?logout=1">Abmelden</a>
                 <?php else: ?>
@@ -287,6 +288,11 @@ $aiActive = ai_is_active();
                 <h2>Datenübertragung</h2>
                 <p>Alle dynamischen Daten (MOTD, Mitglieder, Expeditionen, Accounts, Templates, Berechtigungen, Zustimmungs-Audit, Besucherzähler, IMAP-Config, KI-Config) als ZIP-Bundle exportieren oder importieren &ndash; für Backup, Staging-Production-Übertragung und Migrationen.</p>
                 <p><a href="#data-bereich">Daten übertragen &rarr;</a></p>
+            </div>
+            <div class="card">
+                <h2>Änderungshistorie</h2>
+                <p>Chronologischer Verlauf aller Deploys, automatisch aus der Git-Historie erzeugt &ndash; Feature/Fix/Sonstige, Commit-ID, Datum, Autor.</p>
+                <p><a href="changelog.php">Änderungshistorie ansehen &rarr;</a></p>
             </div>
         </div>
 

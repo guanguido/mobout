@@ -11,3 +11,6 @@ Thumbs.db
 
 # MOTD-Daten (nur serverseitig, muss Deploys überstehen)
 /mitglieder/data/
+
+# Änderungshistorie: wird nur von der Deploy-Pipeline erzeugt, nie lokal
+/admin/changelog-data.txt

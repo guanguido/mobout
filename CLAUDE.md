@@ -31,6 +31,9 @@ mobout/
 │   ├── data-transfer-import.php # Nimmt ein ZIP-Bundle entgegen, ersetzt ausgewählte Module vollständig (mit Backup)
 │   ├── data-transfer-backup-delete.php # Löscht eine einzelne Sicherung aus mitglieder/data/backups/
 │   ├── member-image.php # Admin-geschützte Foto-Vorschau (ohne Consent-Filter, im Unterschied zum öffentlichen member-image.php)
+│   ├── changelog-lib.php # Rein lesende Lib: parst die von der Deploy-Pipeline erzeugte changelog-data.txt (Git-Log-Export), klassifiziert Feature/Fix/Sonstige, paginiert
+│   ├── changelog.php   # Admin-only Änderungshistorie: paginierte Tabelle aller Deploy-Commits dieses Systems, produktiver Commit markiert
+│   ├── .htaccess       # Sperrt Direktzugriff auf changelog-data.txt (rohe, ungeschützte Textdatei)
 │   └── help.php        # Admin-only Hilfeseite: Prozess Benutzeranlage, Bestands-Zustimmung, Templates, Anzeige-Regel, Audit, Datensicherung
 ├── mitglieder/         # Mitgliederbereich (PHP-Session-Login, individuelle E-Mail-Accounts)
 │   ├── index.php       # Eigenständige Seite (eigenes CSS, Logo als Base64); Login-Gate (inkl. Magic-Link-Auto-Login per E-Mail+OTP-Query-Parameter) + Crew-Karten + persönliche Konto-Sektion (eigenes Profil, Passwort, Zustimmung), Begrüßung mit Mitgliedsnamen
@@ -719,6 +722,67 @@ abgesichert (Strato erlaubt Outbound, cURL 8.19 + OpenSSL 3.0 vorhanden, Konto/K
 - **Umgebungstrennung:** Production (HTTPS) und Staging (HTTP) haben getrennte `ai-config.json`. Der
   API-Key sollte je Umgebung getrennt sein (Staging-Key ≠ Production-Key), da der Key auf Staging
   beim Eintragen über HTTP übertragen wird.
+
+---
+
+## Änderungshistorie (Admin)
+
+Chronologische, paginierte Übersicht der Deploys dieses Systems (Feature/Fix/Sonstige, Datum,
+Autor, Commit-ID) im Admin-Bereich – **ohne jede manuelle Pflege**: die Daten stammen
+ausschließlich aus der Git-Historie und werden bei jedem Deploy automatisch neu erzeugt.
+
+- **Technische Hürde:** Das deployte Server-Filesystem enthält **kein** `.git`-Verzeichnis
+  (`rsync` überträgt eine feste Dateiliste, `.git` ist nie dabei) und keine PHP-Datei im Projekt
+  hat je `exec()`/`shell_exec()`/`proc_open()` verwendet – zur Laufzeit kann also nicht "git
+  gefragt" werden. Lösung: Die Historie wird **zur Deploy-Zeit** in der GitHub-Actions-Pipeline
+  exportiert (dort existiert ein vollständiger Checkout inkl. `.git`) und als einfache Textdatei
+  mit ausgeliefert – gleiches Prinzip wie beim bereits bestehenden `__BUILD_INFO__`-Platzhalter
+  in `index.html` (Wert zur Build-Zeit ermitteln, statisch ausliefern), nur erweitert auf die
+  volle Commit-Liste.
+- **Erzeugung:** `.github/workflows/deploy-strato.yml`, Step „Export Git-Änderungshistorie"
+  (nach „Inject build info", vor „Deploy to Strato"). Voraussetzung ist ein vollständiger
+  Checkout (`actions/checkout@v4` mit `fetch-depth: 0`, unproblematisch bei der aktuellen
+  Repo-Größe). Schreibt `admin/changelog-data.txt`: erste Zeile `PRODUCTION_HEAD=<sha>`
+  (`git rev-parse origin/master`, mit Fallback auf den aktuellen Commit), danach ein `git log`
+  über den gerade ausgecheckten Stand (`%H%x1f%an%x1f%aI%x1f%P%x1f%s` je Zeile, `\x1f` als
+  Feldtrenner statt JSON-Escaping in Bash, da Commit-Messages Anführungszeichen enthalten
+  können). Da `admin/` als ganzes Verzeichnis rsynct wird, braucht die neue Datei keinen
+  eigenen Eintrag in der rsync-Dateiliste. **Jede Umgebung bekommt automatisch nur ihre eigene
+  deployte Historie** (Production exportiert `master`s Log, Staging exportiert `develop`s Log) –
+  es werden nie Commits gezeigt, die auf dieser Umgebung gar nicht laufen.
+- **Kurz-Hash-Konsistenz:** Die 7-stellige Kurz-ID wird in PHP per `substr($hash, 0, 7)`
+  berechnet statt Gits `%h` zu nutzen (das kann bei Kollisionsrisiko länger werden) – identisch
+  zur `${SHA:0:7}`-Berechnung, die der Workflow für `__BUILD_INFO__` im Footer der öffentlichen
+  Website verwendet. Die Änderungshistorie zeigt oben zusätzlich einen Hinweistext mit genau
+  dieser Kurz-ID des eigenen Umgebungsstands, um die Verknüpfung zur öffentlichen
+  Versionsanzeige sichtbar zu machen.
+- **Schutz der Rohdatei:** `admin/changelog-data.txt` ist eine rohe Textdatei ohne eigenes
+  PHP-Session-Gate (im Unterschied zu den `.php`-Endpunkten in `admin/`). `admin/.htaccess`
+  (`RedirectMatch 403`) sperrt den direkten HTTP-Zugriff, analog zum Muster in
+  `mitglieder/.htaccess`.
+- **Lib/Seite:** `admin/changelog-lib.php` (rein lesend, kein Schreibpfad – parst
+  `changelog-data.txt`, klassifiziert und paginiert) und `admin/changelog.php` (Session-
+  geschützt wie `admin/help.php`, `require_admin()`, kein eigenes CSRF nötig da keine
+  Formulare). Erreichbar über eine eigene Dashboard-Kachel und einen Nav-Link im Admin-Bereich.
+- **Klassifizierung (Feature/Fix/Sonstige):** Regex auf die seit Mitte 2026 genutzte
+  Commit-Konvention (`Feat: ...`, `Fix: ...`). Ältere bzw. unpräfixierte Commits (vor dieser
+  Konvention, z. B. `Navionics: ...` oder ganz ohne Präfix) fallen bewusst in „Sonstige" statt
+  geraten zu werden.
+- **Feature-Branch-Erkennung:** Nur für echte Merge-Commits (≥ 2 Parents) mit dem Muster
+  „Merge `<branch>` into develop" – „Merge develop into master" ist eine
+  Staging→Production-Promotion, kein Feature-Branch, und wird bewusst ausgeschlossen. Der
+  Großteil der Historie ist linear (direkte Commits auf `develop`, siehe „Arbeitsweise" oben)
+  und zeigt hier konsequent keinen Branch-Namen an, statt einen zu erraten.
+- **Produktiver Commit:** Die Zeile, deren Hash `PRODUCTION_HEAD` entspricht, wird in der
+  Tabelle mit einem „Produktiv"-Badge markiert – besonders relevant beim Betrachten auf
+  Staging, wo `develop`s Log (Obermenge, da `master` per Fast-Forward-Konvention immer ein
+  Vorfahre von `develop` ist) auch bereits Commits enthält, die auf Production noch nicht
+  angekommen sind.
+- **Bewusst nicht Teil der Datenübertragung:** Kein Modul in `admin/data-transfer-lib.php`s
+  Export/Import-Registry – die Daten sind bei jedem Deploy automatisch neu erzeugt, kein
+  Nutzerdaten-Bestand; ein Restore eines alten Snapshots würde die tatsächlich deployte
+  Historie aktiv falsch darstellen.
+- **Paginierung:** `admin/changelog.php?page=N`, 30 Einträge pro Seite.
 
 ---
 

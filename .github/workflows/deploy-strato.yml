@@ -10,6 +10,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set deploy target
         id: target
@@ -27,6 +29,15 @@ jobs:
           BUILD_TS=$(TZ='Europe/Berlin' date -d "${{ github.event.head_commit.timestamp }}" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "${{ github.event.head_commit.timestamp }}")
           BUILD_INFO="$SHORT_SHA | $BUILD_TS"
           sed -i "s#__BUILD_INFO__#$BUILD_INFO#g" index.html
+
+      - name: Export Git-Änderungshistorie
+        run: |
+          git fetch origin master:refs/remotes/origin/master 2>/dev/null || true
+          PROD_HEAD=$(git rev-parse origin/master 2>/dev/null || echo "${{ github.sha }}")
+          {
+            echo "PRODUCTION_HEAD=$PROD_HEAD"
+            git log --pretty=format:'%H%x1f%an%x1f%aI%x1f%P%x1f%s'
+          } > admin/changelog-data.txt
 
       - name: Deploy to Strato
         run: |

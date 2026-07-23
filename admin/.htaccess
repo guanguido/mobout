@@ -1,0 +1,4 @@
+# admin/changelog-data.txt wird bei jedem Deploy von der GitHub-Actions-Pipeline neu erzeugt
+# (Git-Log-Export für admin/changelog.php) und ist eine rohe Textdatei ohne eigenen
+# Zugriffsschutz (keine .php-Datei, kein Session-Gate). Direkten HTTP-Zugriff sperren.
+RedirectMatch 403 ^.*/admin/changelog-data\.txt$
