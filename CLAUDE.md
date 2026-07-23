@@ -60,6 +60,11 @@ mobout/
 │   ├── ai-config-seed.json # Git-getrackter Default der KI-Konfiguration (deaktiviert, ohne Key)
 │   ├── data/           # Nur serverseitig, git-ignoriert (motd.txt, expeditions.json, expeditions-images/, members.json, members-images/, accounts.json, email-templates.json, role-permissions.json, consent-log/, visitor-counter.json, visitor-counter-today.json, ai-config.json, backups/) – überlebt Deploys; per .htaccess ("Require all denied") gegen Direktzugriff gesperrt
 │   └── .htaccess       # Sperrt Direktzugriff auf data/ (RedirectMatch 403); KEIN Basic Auth mehr
+├── app/                 # Installierbare PWA ("MobOut als App"), Phase 1: nur statische Inhalte
+│   ├── index.html      # Eigenständige Seite (eigenes, schlankeres CSS im mobout-Design) mit Über-uns- und Kontakt-Abschnitt, Kontaktformular nutzt /contact.php
+│   ├── manifest.json   # Web-App-Manifest (Name, Icons, standalone-Display, theme_color)
+│   ├── service-worker.js # Minimaler App-Shell-Cache (Cache-first für app/-Assets, POST-Requests wie /contact.php nie gecacht)
+│   └── icons/           # Generierte App-Icons (192/512/512-maskable/apple-touch-icon), aus assets/images/MobOutLogo.png erzeugt
 ├── assets/
 │   ├── images/         # Originalfotos (Personenbilder, Logos)
 │   └── data/           # Excel-Tabellen (MobOut_Teilnehmer.xlsx, MobOut_Expeditionen.xlsx)
@@ -722,6 +727,47 @@ abgesichert (Strato erlaubt Outbound, cURL 8.19 + OpenSSL 3.0 vorhanden, Konto/K
 - **Umgebungstrennung:** Production (HTTPS) und Staging (HTTP) haben getrennte `ai-config.json`. Der
   API-Key sollte je Umgebung getrennt sein (Staging-Key ≠ Production-Key), da der Key auf Staging
   beim Eintragen über HTTP übertragen wird.
+
+---
+
+## MobOut App (PWA)
+
+Installierbare Progressive Web App unter `mobout.de/app/` – ein Icon auf dem Homescreen, das
+eine eigenständige, offline-fähige Seite im mobout-Design öffnet, statt der vollen
+Hauptseite. **Bewusst kleiner erster Schritt** (Phase 1): nur statische Inhalte, keine
+dynamischen Daten, kein Login.
+
+- **Technologie-Entscheidung:** PWA statt nativer App oder Capacitor-Hülle – kein neues
+  Build-System, keine App-Store-Freigabe nötig, passt zum bestehenden „reines HTML/CSS/JS
+  ohne Framework"-Stack. Spätere Erweiterung (Team/Expeditionen live nachladen,
+  Mitglieder-Login, ggf. Capacitor-Wrapper für App-Stores) ist damit nicht verbaut, sondern
+  ein inkrementeller nächster Schritt.
+- **Inhalt (Phase 1):** eigener, schlanker Header (Logo + Titel, kein Nav-Menü), Hero,
+  Abschnitt „Über MobOut" (identischer Text + 6er Feature-Grid wie auf der Hauptseite),
+  Abschnitt „Kontakt" (Kontakt-Info-Grid + Kontaktformular). **Nicht enthalten:** Team,
+  Expeditionen, Galerie (auf der Hauptseite dynamisch aus `members.php`/`expeditions.php`
+  bzw. reine Platzhalter) und der Mitgliederbereich – Footer verlinkt stattdessen auf
+  `www.mobout.de` für die vollständige Website.
+- **Kontaktformular:** sendet `FormData` an denselben bestehenden Endpunkt `/contact.php`
+  wie die Hauptseite (identische Feldnamen `name`/`email`/`subject`/`message`) – kein
+  eigener Backend-Code nötig, der Pfad ist absolut und funktioniert daher unverändert von
+  `/app/` aus.
+- **`app/manifest.json`:** `start_url`/`scope` auf `/app/` begrenzt, `display: standalone`,
+  `theme_color`/`background_color` in den mobout-Markenfarben, drei Icon-Größen (192, 512,
+  512 maskable).
+- **`app/service-worker.js`:** minimaler App-Shell-Cache (Cache-first) ausschließlich für
+  `GET`-Requests unter `/app/` (Seite, Manifest, Icons). `POST`-Requests wie an
+  `/contact.php` werden nie abgefangen/gecacht.
+- **Icons:** `app/icons/*.png` sind aus `assets/images/MobOutLogo.png` generierte,
+  git-getrackte Dateien (kreisförmig zugeschnitten, mit Sicherheitsabstand für das
+  maskable-Icon) – **nicht** live aus `assets/` referenziert, da `assets/` nicht deployt
+  wird (siehe „Tech Stack"); der Header von `app/index.html` nutzt stattdessen das bereits
+  deployte `icons/icon-192.png`.
+- **Deploy:** `app/` ist Teil der rsync-Dateiliste in
+  `.github/workflows/deploy-strato.yml`, wie `admin/`/`mitglieder/`. Keine `data/`-artigen
+  Laufzeitdaten in Phase 1, daher kein `--exclude`-Sonderfall nötig.
+- **Auffindbarkeit:** dezenter Link „📱 Als App installieren" im Footer von `index.html`
+  (verweist auf `/app/`).
 
 ---
 

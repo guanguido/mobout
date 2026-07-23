@@ -56,6 +56,7 @@ jobs:
             member-image.php \
             admin \
             mitglieder \
+            app \
             ${{ secrets.STRATO_USER }}@${{ secrets.STRATO_HOST }}:${{ steps.target.outputs.path }}
 
           # Kein Basic Auth mehr im Mitgliederbereich (individuelle Accounts statt
