@@ -1,5 +1,6 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
+require_once __DIR__ . '/mitglieder/site-config-lib.php';
 
 function fail(string $error): void
 {
@@ -33,10 +34,11 @@ $name = $stripNewlines($name);
 $email = $stripNewlines($email);
 $subject = $stripNewlines($subject);
 
-$to = 'info@mobout.de';
+$siteConfig = load_site_config();
+$to = $siteConfig['email'] !== '' ? $siteConfig['email'] : 'info@mobout.de';
 $mailSubject = '[MobOut Kontaktformular] ' . $subject;
 $body = "Name: $name\nE-Mail: $email\n\n$message\n";
-$headers = "From: MobOut Website <info@mobout.de>\r\n"
+$headers = "From: MobOut Website <$to>\r\n"
     . "Reply-To: $name <$email>\r\n"
     . 'Content-Type: text/plain; charset=utf-8';
 

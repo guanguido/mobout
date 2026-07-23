@@ -4,6 +4,7 @@ require_once __DIR__ . '/../mitglieder/members-lib.php';
 require_once __DIR__ . '/../mitglieder/accounts-lib.php';
 require_once __DIR__ . '/../mitglieder/email-templates-lib.php';
 require_once __DIR__ . '/../mitglieder/navionics-lib.php';
+require_once __DIR__ . '/../mitglieder/site-config-lib.php';
 require_once __DIR__ . '/../mitglieder/role-permissions-lib.php';
 require_once __DIR__ . '/../mitglieder/visitor-counter-lib.php';
 require_once __DIR__ . '/../mitglieder/imap-lib.php';
@@ -268,6 +269,11 @@ $aiActive = ai_is_active();
                 <h2>Navionics Zugangsdaten</h2>
                 <p>Gemeinsame Account-Anmeldedaten für die Boating HD App.</p>
                 <p><a href="#navionics-bereich">Bearbeiten &rarr;</a></p>
+            </div>
+            <div class="card">
+                <h2>Kontaktdaten</h2>
+                <p>E-Mail, Telefon und Instagram-Link der öffentlichen Website bearbeiten.</p>
+                <p><a href="#kontaktdaten-bereich">Bearbeiten &rarr;</a></p>
             </div>
             <div class="card">
                 <h2>Berechtigungen</h2>
@@ -674,6 +680,20 @@ $aiActive = ai_is_active();
                 <?php $navionics = load_navionics(); ?>
                 <?php foreach (navionics_field_defs() as $key => $label): ?>
                     <label><?= h($label) ?><input type="text" name="navionics[<?= h($key) ?>]" value="<?= h($navionics[$key] ?? '') ?>" style="width:100%;"></label>
+                <?php endforeach; ?>
+                <p><button type="submit">Speichern</button></p>
+            </form>
+        </section>
+
+        <!-- Kontaktdaten: E-Mail, Telefon, Instagram-Link der oeffentlichen Website -->
+        <section class="panel" id="kontaktdaten-bereich">
+            <h2>Kontaktdaten</h2>
+            <p class="hint">E-Mail, Telefon und Instagram-Link, wie sie auf der öffentlichen Website (Kontakt-Bereich, Instagram-Link) angezeigt werden.</p>
+            <form method="post" action="site-config-save.php">
+                <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
+                <?php $siteConfig = load_site_config(); ?>
+                <?php foreach (site_config_field_defs() as $key => $label): ?>
+                    <label><?= h($label) ?><input type="<?= $key === 'email' ? 'email' : 'text' ?>" name="site_config[<?= h($key) ?>]" value="<?= h($siteConfig[$key] ?? '') ?>" style="width:100%;"></label>
                 <?php endforeach; ?>
                 <p><button type="submit">Speichern</button></p>
             </form>

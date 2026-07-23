@@ -54,6 +54,7 @@ jobs:
             expedition-image.php \
             members.php \
             member-image.php \
+            site-config.php \
             admin \
             mitglieder \
             ${{ secrets.STRATO_USER }}@${{ secrets.STRATO_HOST }}:${{ steps.target.outputs.path }}

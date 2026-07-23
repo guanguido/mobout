@@ -2,6 +2,7 @@
 // PHP-Session-Login-Gate fuer den Mitgliederbereich. Ersetzt den frueheren Apache
 // Basic Auth. Ohne gueltige Session wird nur die Login-Seite gezeigt.
 require __DIR__ . '/member-auth.php';
+require_once __DIR__ . '/site-config-lib.php';
 
 // Logout
 if (($_GET['logout'] ?? '') === '1') {
@@ -403,8 +404,9 @@ $memberRole = (string) ($memberSelf['role'] ?? '');
         <section class="account-section" id="instagram-bereich">
             <h2>Instagram &ndash; Zugangsdaten &amp; Anleitung</h2>
             <p>Geteilter MobOut-Account. Alles, was du <strong>aus diesem Account</strong> postest, landet automatisch im Instagram-Archiv des Accounts und kann darüber auf der Website verlinkt werden.</p>
+            <?php $instagramUrl = load_site_config()['instagram'] ?: 'https://www.instagram.com/mobout.de'; ?>
             <dl class="account-info">
-                <dt>Profil</dt><dd><a href="https://www.instagram.com/mobout.de" target="_blank" rel="noopener">instagram.com/mobout.de</a></dd>
+                <dt>Profil</dt><dd><a href="<?= htmlspecialchars($instagramUrl) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($instagramUrl) ?></a></dd>
                 <dt>Benutzername</dt><dd>mobout.de</dd>
                 <dt>Passwort</dt><dd>J$CMobout</dd>
                 <dt>E-Mail</dt><dd>info@mobout.de</dd>

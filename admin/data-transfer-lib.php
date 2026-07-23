@@ -14,6 +14,7 @@ require_once __DIR__ . '/../mitglieder/expeditions-lib.php';
 require_once __DIR__ . '/../mitglieder/accounts-lib.php';
 require_once __DIR__ . '/../mitglieder/email-templates-lib.php';
 require_once __DIR__ . '/../mitglieder/navionics-lib.php';
+require_once __DIR__ . '/../mitglieder/site-config-lib.php';
 require_once __DIR__ . '/../mitglieder/role-permissions-lib.php';
 require_once __DIR__ . '/../mitglieder/visitor-counter-lib.php';
 
@@ -408,6 +409,16 @@ function data_transfer_export_navionics(): array
     ];
 }
 
+function data_transfer_export_site_config(): array
+{
+    $data = load_site_config();
+    return [
+        'files' => ['site-config/site-config.json' => json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)],
+        'images' => [],
+        'count' => 1,
+    ];
+}
+
 function data_transfer_export_role_permissions(): array
 {
     $data = load_role_permissions();
@@ -616,6 +627,26 @@ function data_transfer_import_navionics(ZipArchive $zip): array
     return ['ok' => true, 'summary' => 'Navionics-Zugangsdaten importiert.'];
 }
 
+function data_transfer_import_site_config(ZipArchive $zip): array
+{
+    $idx = $zip->locateName('site-config/site-config.json');
+    if ($idx === false) {
+        return ['ok' => false, 'summary' => 'Kontaktdaten: Datei nicht im Archiv gefunden, übersprungen.'];
+    }
+    $json = $zip->getFromIndex($idx);
+    $data = $json !== false ? json_decode($json, true) : null;
+    if (!is_array($data)) {
+        return ['ok' => false, 'summary' => 'Kontaktdaten: Datei ungültig, Import abgebrochen.'];
+    }
+
+    if (data_transfer_backup_file('site-config', site_config_data_file())) {
+        data_transfer_prune_backups('site-config');
+    }
+
+    save_site_config($data);
+    return ['ok' => true, 'summary' => 'Kontaktdaten importiert.'];
+}
+
 function data_transfer_import_role_permissions(ZipArchive $zip): array
 {
     $idx = $zip->locateName('role-permissions/role-permissions.json');
@@ -725,6 +756,11 @@ function data_transfer_modules(): array
             'label' => 'Navionics Zugangsdaten',
             'export' => 'data_transfer_export_navionics',
             'import' => 'data_transfer_import_navionics',
+        ],
+        'site-config' => [
+            'label' => 'Kontaktdaten (E-Mail, Telefon, Instagram)',
+            'export' => 'data_transfer_export_site_config',
+            'import' => 'data_transfer_import_site_config',
         ],
         'role-permissions' => [
             'label' => 'Rollen-Berechtigungen',

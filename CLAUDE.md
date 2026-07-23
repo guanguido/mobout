@@ -18,6 +18,7 @@ mobout/
 ├── members.php          # Öffentlicher Lese-Endpunkt für die Mitgliederliste als JSON (kein Basic Auth)
 ├── member-image.php     # Öffentlicher Bild-Streaming-Endpunkt für Mitglieder-Fotos (kein Basic Auth)
 ├── counter.php           # Öffentlicher Schreib-Endpunkt für den Besucherzähler (kein Basic Auth), erhöht Seitenaufrufe/eindeutige Besucher
+├── site-config.php       # Öffentlicher Lese-Endpunkt für Kontaktdaten (E-Mail, Telefon, Instagram-Link) als JSON (kein Basic Auth)
 ├── admin/               # Versteckter Admin-Bereich (eigene PHP-Session-Auth, NICHT Basic Auth)
 │   ├── index.php       # Login + Dashboard: Mitglieder-CRUD, Zustimmungs-Übersicht, E-Mail-Templates, Berechtigungen, Besucherzähler, Datenübertragung (Logo als Base64)
 │   ├── auth.php        # Session-Auth, hardcodierter Admin (User "Admin" + bcrypt-Hash), CSRF-Helfer
@@ -25,6 +26,7 @@ mobout/
 │   ├── email-templates-save.php # Speichert Betreff/Text der editierbaren E-Mail-Templates
 │   ├── role-permissions-save.php # Speichert/setzt zurück die Berechtigungs-Matrix (Rolle x Recht)
 │   ├── ai-config-save.php # Speichert die KI-Konfiguration (Aktiv-Schalter, API-Key, Modell); testet die Verbindung beim Aktivieren
+│   ├── site-config-save.php # Speichert die Kontaktdaten (E-Mail, Telefon, Instagram-Link)
 │   ├── ai-generate.php # AJAX-Endpunkt: erzeugt aus Schlagworten einen Kurztext-Vorschlag (immer HTTP 200 JSON, stille Fehlertoleranz)
 │   ├── data-transfer-lib.php    # Modul-Registry für Export/Import der dynamischen data/-Inhalte (MOTD, Mitglieder, Expeditionen, Accounts, E-Mail-Templates, Rollen-Berechtigungen, Zustimmungs-Audit-Log, Besucherzähler), Backup-Rotation
 │   ├── data-transfer-export.php # Baut ein ZIP-Bundle aller Module und liefert es als Download
@@ -58,7 +60,9 @@ mobout/
 │   ├── visitor-counter-lib.php # Lese-/Schreibfunktionen für den Besucherzähler (Seitenaufrufe, eindeutige Besucher), von counter.php und admin/index.php genutzt
 │   ├── ai-lib.php      # KI-Textgenerierung: Config-Load/Save, ai_is_active() (Kostenkontrolle), ai_generate_slogan() via cURL (stille Fehlertoleranz), test_ai_connection()
 │   ├── ai-config-seed.json # Git-getrackter Default der KI-Konfiguration (deaktiviert, ohne Key)
-│   ├── data/           # Nur serverseitig, git-ignoriert (motd.txt, expeditions.json, expeditions-images/, members.json, members-images/, accounts.json, email-templates.json, role-permissions.json, consent-log/, visitor-counter.json, visitor-counter-today.json, ai-config.json, backups/) – überlebt Deploys; per .htaccess ("Require all denied") gegen Direktzugriff gesperrt
+│   ├── site-config-lib.php # Kontaktdaten: Registry (E-Mail, Telefon, Instagram-Link), Config-Load/Save mit Seed-Fallback
+│   ├── site-config-seed.json # Git-getrackter Default der Kontaktdaten (aktuelle Werte von index.html)
+│   ├── data/           # Nur serverseitig, git-ignoriert (motd.txt, expeditions.json, expeditions-images/, members.json, members-images/, accounts.json, email-templates.json, role-permissions.json, consent-log/, visitor-counter.json, visitor-counter-today.json, ai-config.json, site-config.json, backups/) – überlebt Deploys; per .htaccess ("Require all denied") gegen Direktzugriff gesperrt
 │   └── .htaccess       # Sperrt Direktzugriff auf data/ (RedirectMatch 403); KEIN Basic Auth mehr
 ├── assets/
 │   ├── images/         # Originalfotos (Personenbilder, Logos)
@@ -80,7 +84,8 @@ mobout/
   `motd.php`, `contact.php`, `expeditions.php`, `expedition-image.php`,
   `mitglieder/expeditions-save.php`, `mitglieder/expeditions-lib.php`, `members.php`,
   `member-image.php`, `mitglieder/members-lib.php`, `mitglieder/role-permissions-lib.php`,
-  `counter.php`, `mitglieder/visitor-counter-lib.php`, `mitglieder/ai-lib.php` und `admin/*.php`,
+  `counter.php`, `mitglieder/visitor-counter-lib.php`, `mitglieder/ai-lib.php`,
+  `site-config.php`, `mitglieder/site-config-lib.php` und `admin/*.php`,
   siehe eigene Abschnitte unten
 
 ## Sprache
@@ -90,8 +95,8 @@ Deutsch (de)
 ## Kontakt / Domain
 
 - Domain: www.mobout.de
-- E-Mail: info@mobout.de
-- Instagram: @mobout.de (https://www.instagram.com/mobout.de) – gemeinsames Gruppenkonto, verlinkt aus dem Bereich „Expeditionen" in index.html
+- E-Mail: info@mobout.de (Seed-Standard; im Admin-Bereich änderbar, siehe „Kontaktdaten (dynamisch)")
+- Instagram: @mobout.de (https://www.instagram.com/mobout.de) – gemeinsames Gruppenkonto, verlinkt aus dem Bereich „Expeditionen" in index.html (Seed-Standard; im Admin-Bereich änderbar)
 
 ---
 
@@ -315,6 +320,41 @@ Registry, Seed-Fallback, load/save/reset):
   -Registry, exportiert/importiert `navionics.json` im ZIP-Bundle.
 - **Abo-Läuft-ab:** Aktuell 14.05.2027 – bei Verlängerung/Änderung das Feld im Admin-Panel
   aktualisieren.
+
+## Kontaktdaten (dynamisch)
+
+Kontakt-E-Mail, Telefonnummer und der öffentliche Instagram-Link waren bisher an mehreren Stellen
+hartcodiert (`index.html`, `contact.php`, `mitglieder/index.php`) – jede Änderung erforderte einen
+Deploy. Folgt demselben `data/`-Seed-Muster wie die Navionics-Zugangsdaten (multi-field JSON mit
+Registry, Seed-Fallback, load/save). **Bewusst nicht enthalten:** Postadresse/Region (bleibt
+statischer Text in `index.html`) und die Instagram-**Zugangsdaten** (Benutzername/Passwort der
+Mitglieder-Karte, siehe „Mitgliederbereich" oben) – dort ändert sich nur der Profil-**Link**.
+
+- **Speicher:** `mitglieder/data/site-config.json` (git-ignoriert, server-only), Seed-Fallback
+  `mitglieder/site-config-seed.json` (git-getrackt, aktuelle Default-Werte: E-Mail, Telefon,
+  Instagram-Link).
+- **Lib:** `mitglieder/site-config-lib.php` mit der Registry `site_config_field_defs()` (drei
+  Felder: `email`, `phone`, `instagram`), `load_site_config()` (Daten-vor-Seed-Fallback),
+  `save_site_config()`.
+- **Admin-UI:** Panel „Kontaktdaten" in `admin/index.php` (`#kontaktdaten-bereich`) – ein Textfeld
+  je Feld (E-Mail-Feld mit `type="email"`). Speichert über `admin/site-config-save.php`. Kein
+  Reset-Button, da es keinen sinnvollen Standard gibt (analog Navionics).
+- **Öffentlicher Endpunkt:** `site-config.php` (Repo-Root, öffentlich, kein Auth) liest
+  `load_site_config()` und liefert es unverändert als JSON – Muster wie `motd.php`/`expeditions.php`.
+  `index.html` lädt es per `fetch('/site-config.php')` und aktualisiert E-Mail-Link
+  (`#contact-email-link`), Telefon-Link (`#contact-phone-link`, seit dieser Umstellung zusätzlich
+  ein `tel:`-Link statt reinem Text) und Instagram-Link (`#instagram-cta-link`) ausschließlich per
+  Property-Zuweisung (`href`/`textContent`, nie `innerHTML`). Schlägt der Fetch fehl, bleibt der
+  statische Fallback-Wert im Markup stehen (identisches Fehlertoleranz-Muster wie MOTD/Expeditionen).
+- **Kontaktformular:** `contact.php` liest den Empfänger über `load_site_config()['email']`
+  (Fallback `info@mobout.de`, falls leer) statt ihn hartzucodieren – gilt sowohl für den
+  Envelope-Empfänger als auch den `From`-Header.
+- **Mitgliederbereich:** Die Instagram-Karte (`#instagram-bereich` in `mitglieder/index.php`)
+  liest den Profil-Link ebenfalls über `load_site_config()['instagram']` (eine gemeinsame Quelle für
+  beide Anzeigeorte); Benutzername/Passwort/Mobilnummer der Karte bleiben unverändert statischer
+  Karteninhalt (Account-Zugangsdaten, keine öffentliche Kontaktinfo).
+- **Export/Import:** Modul `site-config` in `admin/data-transfer-lib.php`s `data_transfer_modules()`
+  -Registry, exportiert/importiert `site-config.json` im ZIP-Bundle.
 
 ## Nachricht des Tages (MOTD)
 
@@ -808,8 +848,8 @@ abweichender Stände.
 
 - **Architektur:** `admin/data-transfer-lib.php` definiert eine zentrale Modul-Registry
   (`data_transfer_modules()`) mit den Modulen `motd`, `members`, `expeditions`, `accounts`,
-  `email-templates`, `navionics`, `role-permissions`, `consent-log`, `visitor-counter`, `imap-config`,
-  `ai-config`. Jedes Modul hat eine `export`- und eine `import`-Funktion;
+  `email-templates`, `navionics`, `site-config`, `role-permissions`, `consent-log`, `visitor-counter`,
+  `imap-config`, `ai-config`. Jedes Modul hat eine `export`- und eine `import`-Funktion;
   Export-/Import-Endpunkt sowie die Admin-UI iterieren generisch über die Registry (jedes Modul im
   UI einzeln per Checkbox wähl-/abwählbar). **Erweiterbar:** ein künftiger weiterer dynamischer
   Datentyp nach demselben `data/`-Prinzip wird durch zwei neue Funktionen plus einen weiteren
@@ -827,7 +867,8 @@ abweichender Stände.
   enthaltene Module) sowie je Modul der JSON-Datei und den referenzierten Bildern/Dateien
   (`members/members.json` + `members/images/...`, `expeditions/expeditions.json` +
   `expeditions/images/...`, `motd/motd.txt`, `accounts/accounts.json`,
-  `email-templates/email-templates.json`, `navionics/navionics.json`, `role-permissions/role-permissions.json`,
+  `email-templates/email-templates.json`, `navionics/navionics.json`, `site-config/site-config.json`,
+  `role-permissions/role-permissions.json`,
   `consent-log/<datei>.json` je Zustimmung, `visitor-counter/visitor-counter.json`,
   `imap-config/imap-config.json`, `ai-config/ai-config.json`).
 - **Export:** `admin/data-transfer-export.php` (Session- + CSRF-geschützt) baut das ZIP aus allen
@@ -885,7 +926,7 @@ gewünschten Mitglieder setzen, damit die Seite nicht leer bleibt.
 - Secrets vorhanden: `STRATO_SSH_KEY`, `STRATO_HOST`, `STRATO_USER`
 - Zwei-Ziel-Push: `git push origin <branch>` geht an NAS (Master-Backup) + GitHub
 - Pull nur vom NAS (`origin` fetch = NAS, push = NAS + GitHub)
-- Übertragen werden `index.html` + `motd.php` + `contact.php` + `counter.php` + `expeditions.php` + `expedition-image.php` + `members.php` + `member-image.php` + `admin/` + `mitglieder/` (wenn `assets/` deployrelevant wird: Workflow anpassen)
+- Übertragen werden `index.html` + `motd.php` + `contact.php` + `counter.php` + `expeditions.php` + `expedition-image.php` + `members.php` + `member-image.php` + `site-config.php` + `admin/` + `mitglieder/` (wenn `assets/` deployrelevant wird: Workflow anpassen)
 - Kein Basic-Auth-Seed-Schritt mehr nötig (individuelle Accounts statt geteiltem Login): `accounts.json`, `email-templates.json`, `consent-log/` und die `data/`-Härtung entstehen zur Laufzeit (`member_ensure_data_hardening()` in `mitglieder/member-auth.php`) und sind über `--exclude=data/` bereits deploy-sicher
 
 ## Arbeitsweise

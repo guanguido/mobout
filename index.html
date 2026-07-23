@@ -747,7 +747,7 @@
 <div class="expedition-cards" id="expedition-cards"></div>
 
             <p style="text-align:center; margin-top: 2rem;">
-                <a href="https://www.instagram.com/mobout.de" target="_blank" class="cta-button" style="display:inline-block;">
+                <a id="instagram-cta-link" href="https://www.instagram.com/mobout.de" target="_blank" class="cta-button" style="display:inline-block;">
                     📸 Alle Stories auf Instagram
                 </a>
             </p>
@@ -808,12 +808,12 @@
                 <div class="contact-item">
                     <div class="contact-item-icon">📧</div>
                     <h3>E-Mail</h3>
-                    <p><a href="mailto:info@mobout.de" style="color: var(--primary-color); text-decoration: none;">info@mobout.de</a></p>
+                    <p><a id="contact-email-link" href="mailto:info@mobout.de" style="color: var(--primary-color); text-decoration: none;">info@mobout.de</a></p>
                 </div>
                 <div class="contact-item">
                     <div class="contact-item-icon">📱</div>
                     <h3>Telefon</h3>
-                    <p>+49 176 82003004</p>
+                    <p><a id="contact-phone-link" href="tel:+4917682003004" style="color: var(--primary-color); text-decoration: none;">+49 176 82003004</a></p>
                 </div>
                 <div class="contact-item">
                     <div class="contact-item-icon">📍</div>
@@ -1023,6 +1023,29 @@
 
         // Besucherzähler (best effort, kein Tracking-Cookie, keine Anzeige auf der Website)
         fetch('/counter.php', { method: 'POST' }).catch(() => {});
+
+        // Kontaktdaten (E-Mail, Telefon, Instagram) - admin-editierbar, Fallback bleibt der
+        // statische Wert im Markup, falls der Fetch fehlschlägt.
+        fetch('/site-config.php')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+                const emailLink = document.getElementById('contact-email-link');
+                if (emailLink && data.email) {
+                    emailLink.href = 'mailto:' + data.email;
+                    emailLink.textContent = data.email;
+                }
+                const phoneLink = document.getElementById('contact-phone-link');
+                if (phoneLink && data.phone) {
+                    phoneLink.href = 'tel:' + data.phone.replace(/[^+\d]/g, '');
+                    phoneLink.textContent = data.phone;
+                }
+                const instagramLink = document.getElementById('instagram-cta-link');
+                if (instagramLink && data.instagram) {
+                    instagramLink.href = data.instagram;
+                }
+            })
+            .catch(() => {});
 
         // Hamburger menu toggle
         const hamburger = document.getElementById('hamburger');
